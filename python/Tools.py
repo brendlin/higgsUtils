@@ -3,10 +3,6 @@ import ROOT
 import math
 import PlotFunctions as plotfunc
 
-lower_range = 105
-upper_range = 160
-ur = upper_range
-
 categories = [
     #None,
     'M17_ggH_0J_Cen',        # 1
@@ -479,9 +475,9 @@ class GetPackage :
 #         self.higgshist = f.Get(histname.replace('AF2','Higgs')).Clone()
 #         self.higgshist.SetDirectory(0)
 #         self.higgshist.SetName('higgshist_%s'%(self.name))
-        self.integral = self.af2hist.Integral(self.af2hist.FindBin(lower_range+0.0001),self.af2hist.FindBin(upper_range-0.000001))
+        self.integral = self.af2hist.Integral(self.af2hist.FindBin(self.lower_range+0.0001),self.af2hist.FindBin(self.upper_range-0.000001))
         binwidth = self.af2hist.GetBinWidth(1)
-        self.bins = int((upper_range-lower_range)/float(binwidth))
+        self.bins = int((self.upper_range-self.lower_range)/float(binwidth))
         #print 'binwidth:',binwidth,'bins:',self.bins
         print 'Integral:',self.integral
         self.obsVar.setBins(int(self.bins)) # was 600
@@ -520,18 +516,24 @@ class GetPackage :
 
     def __init__(self,name,ndof) :
 
+        self.lower_range = 105
+        self.upper_range = 160
+
+        self.lower_blind = 120
+        self.upper_blind = 130
+
         self.chisquare = -1
         self.ndof = ndof
         self.name = name
         self.workspace = ROOT.RooWorkspace(name,"")
 
         # Make the RooRealVar obsVar (m_yy)
-        self.obsVar = self.workspace.factory('m_yy[%d,%d]'%(lower_range,upper_range))
+        self.obsVar = self.workspace.factory('m_yy[%d,%d]'%(self.lower_range,self.upper_range))
         #self.obsVar_rebinned = self.workspace.factory('m_yy[%d,%d]'%(lower_range,upper_range))
 
-        self.obsVar.setRange("lower",lower_range,120) ; 
-        self.obsVar.setRange("upper",130,upper_range) ; 
-        self.obsVar.setRange("all",105,upper_range) ; 
+        self.obsVar.setRange("lower",self.lower_range,self.lower_blind) ; 
+        self.obsVar.setRange("upper",self.upper_blind,self.upper_range) ; 
+        self.obsVar.setRange("all",self.lower_range,self.upper_range) ; 
 
         self.frame = self.obsVar.frame()
 
@@ -767,7 +769,7 @@ def GetSignalBiasMuScan(function,index=0) :
     yup = []
     ydn = []
     bias_signalmu = []
-    for i in range(lower_range,upper_range+1) :
+    for i in range(function.lower_range,function.upper_range+1) :
         #function.workspace.var("muCBNom").setVal(i)
         #function.totalPdf.fitTo(function.data,*args_mclimit)
         GetInjectedSignalBias(function,mass=i)
@@ -837,7 +839,7 @@ def GetSpuriousSignalMu(function,isFFT=False,index=0) :
     spur_signalmu = []
     y_comp = []
     spur_signalmu_comp = []
-    for j in range(lower_range*10,(upper_range+1)*10,5) :
+    for j in range(function.lower_range*10,(function.upper_range+1)*10,5) :
         i = j/10.
         function.workspace.var("muCBNom").setVal(i)
         if isFFT :

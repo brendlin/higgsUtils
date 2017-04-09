@@ -1,6 +1,8 @@
 
 ##################################################################################
 def FitForChi2_DataSidebands(f) :
+    import Tools
+
     #ROOT.gROOT.ProcessLine('.L Extras.h')
     #ROOT.gROOT.LoadMacro("rootlogon.C+")
     #rootlogon()
@@ -32,7 +34,7 @@ def FitForChi2_DataSidebands(f) :
 
     #f.function_ext.chi2FitTo(f.datasb_rebinned,args_datalimit_sideband)
     #f.function_ext.chi2FitTo(f.datasb_rebinned,ROOT.RooFit.Range("lower,upper"),ROOT.RooFit.Extended(True))
-    ClearRooPlot(f.frame)
+    Tools.ClearRooPlot(f.frame)
 
     printArgs(f.BkgArgList)
     ROOT.chi2FitTo_KB(f.function_ext,f.datasb_rebinned)
@@ -61,7 +63,8 @@ def FitForChi2_DataSidebands(f) :
 
 ##################################################################################
 def GetChiSquare_ForSpuriousSignal(frame,af2,function,ndof) :
-    ClearRooPlot(frame)
+    import Tools
+    Tools.ClearRooPlot(frame)
     af2.plotOn(frame)
     function.plotOn(frame)
     # Get the chi2 from the background-only fit
@@ -70,7 +73,8 @@ def GetChiSquare_ForSpuriousSignal(frame,af2,function,ndof) :
 
 ##################################################################################
 def ChiSquareToys_ForSpuriousSignal(f,outdir) :
-    ClearRooPlot(f.frame)
+    import Tools
+    Tools.ClearRooPlot(f.frame)
     f.obsVar.setBins(55)
     h = ROOT.TH1F('p_chi2_hist','p_chi2_hist',10000,0,1)
     c2 = ROOT.TH1F('chi2_hist','chi2_hist',10000,0,5)

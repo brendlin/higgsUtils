@@ -7,6 +7,8 @@ import PyAnalysisPlotting as anaplot
 import TAxisFunctions as taxisfunc
 plotfunc.SetupStyle()
 import Tools
+import FunctionsModule
+import ChiSquareTools
 import os
 
 ROOT.RooMsgService.instance().setGlobalKillBelow(ROOT.RooFit.FATAL)
@@ -67,8 +69,8 @@ def main_singleCategory(options,args) :
     options.outdir += '_c%02d_%s'%(options.category,Tools.categories[options.category])
 
     functions = []
-    Tools.PopulateFunctionList(functions,flist)
-    Tools.LinkFunctionsForFtest(functions)
+    FunctionsModule.PopulateFunctionList(functions,flist)
+    ChiSquareTools.LinkFunctionsForFtest(functions)
     if len(functions) == 0 :
         print 'Error! no functions loaded!'
         import sys; sys.exit()
@@ -257,7 +259,7 @@ def main_singleCategory(options,args) :
     rebin = 10
     functions[0].af2hist.Rebin(rebin)
     binwidth = functions[0].af2hist.GetBinWidth(1)
-    bins = int((Tools.upper_range-Tools.lower_range)/float(binwidth))
+    bins = int((functions[0].upper_range-functions[0].lower_range)/float(binwidth))
     functions[0].af2hist.SetTitle('#gamma#gamma MC')
     functions[0].af2hist.SetLineWidth(2)
     if options.family == 'selected' :
@@ -273,7 +275,7 @@ def main_singleCategory(options,args) :
         f.af2_rebinned = ROOT.RooDataHist('af2_rebinned','',ROOT.RooArgList(f.obsVar),f.af2hist,1.)
         #f.af2_rebinned.plotOn(f.frame,ROOT.RooFit.Range("lower,upper"))
         #f.function.plotOn(f.frame,ROOT.RooFit.NormRange("lower,upper"),ROOT.RooFit.Range("all"))
-        f.chisquare = Tools.GetChiSquare_ForSpuriousSignal(f.frame,f.af2_rebinned,f.function,f.ndof)
+        f.chisquare = ChiSquareTools.GetChiSquare_ForSpuriousSignal(f.frame,f.af2_rebinned,f.function,f.ndof)
         print 'Original chi2:',f.chisquare
         #f.chisquare_toy = Tools.ChiSquareToys_ForSpuriousSignal(f)
         f.minNll = 0
@@ -303,7 +305,7 @@ def main_singleCategory(options,args) :
     if not options.family == 'selected' :
         plotfunc.SetColors(cans[-1])
     plotfunc.FormatCanvasAxes(cans[-1])
-    plotfunc.SetXaxisRanges(cans[-1],Tools.lower_range,Tools.upper_range)
+    plotfunc.SetXaxisRanges(cans[-1],functions[0].lower_range,functions[0].upper_range)
     plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','entries','pull')
     the_text = [plotfunc.GetAtlasInternalText()
                 ,plotfunc.GetSqrtsText(13)+', '+plotfunc.GetLuminosityText(36.1)
