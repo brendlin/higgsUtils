@@ -125,6 +125,11 @@ plotOptions_sb = [ROOT.RooFit.Range("lower,upper"),
                   ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative)
                   ]
 
+plotOptions_sb_all = [ROOT.RooFit.Range("all"),
+                      ROOT.RooFit.NormRange("lower,upper"),
+                      ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative)
+                      ]
+
 # args_mclimit_fast = [ROOT.RooFit.Extended()
 #                      #,ROOT.RooFit.Save()
 #                      ,ROOT.RooFit.Minimizer('Minuit2','migrad') # Minuit2, migrad --> minos
@@ -499,8 +504,8 @@ class GetPackage :
 
     def PrintParameters(self) :
         text = ''
-        self.workspace.var("muCBNom").setVal(125)
-        self.totalPdf.fitTo(self.data,*args_mclimit)
+        #self.workspace.var("muCBNom").setVal(125)
+        #self.totalPdf.fitTo(self.data,*args_mclimit)
         text += '%-10s: '%(self.name)
         text += printArgs(self.BkgArgList)
         return text
@@ -559,9 +564,10 @@ class GetPackage :
 
     def AddBkgFunction(self,expression) :
         self.function = ROOT.RooGenericPdf(self.name,self.name,expression,self.BkgArgList)
+        getattr(self.workspace,'import')(self.function)
         #self.function_ext = ROOT.RooAddPdf(self.name+'_extended','b_ext',ROOT.RooArgList(self.function),ROOT.RooArgList(self.BkgNormalization))
-        self.function_ext = ROOT.RooExtendPdf(self.name+'_extended','b_ext',self.function,self.BkgNormalization)
-        getattr(self.workspace,'import')(self.function_ext)
+        #self.function_ext = ROOT.RooExtendPdf(self.name+'_extended','b_ext',self.function,self.BkgNormalization)
+        self.function_ext = self.workspace.factory("SUM::model(nBkg_ext[20,0,1E7]*%s)"%(self.name))
         return
 
     def AddSpecial(self,expression) :

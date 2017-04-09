@@ -1,63 +1,86 @@
 
+ftest = {
+    'M17_ggH_0J_Cen'        :['ExpPoly2','ExpPoly3'],
+    'M17_ggH_0J_Fwd'        :['ExpPoly2','ExpPoly3'],
+    'M17_ggH_1J_LOW'        :['ExpPoly2','ExpPoly3'],
+    'M17_ggH_1J_MED'        :['ExpPoly2','ExpPoly3'],
+    'M17_ggH_1J_HIGH'       :['Pow','Pow2'],
+    'M17_ggH_1J_BSM'        :['Exponential','ExpPoly2'],
+    'M17_ggH_2J_LOW'        :['ExpPoly2','ExpPoly3'],
+    'M17_ggH_2J_MED'        :['ExpPoly2','ExpPoly3'],
+    'M17_ggH_2J_HIGH'       :['Pow','Pow2'],
+    'M17_ggH_2J_BSM'        :['Pow','Pow2'],
+    'M17_VBF_HjjLOW_loose'  :['Exponential','ExpPoly2'],
+    'M17_VBF_HjjLOW_tight'  :['Exponential','ExpPoly2'],
+    'M17_VBF_HjjHIGH_loose' :['Exponential','ExpPoly2'],
+    'M17_VBF_HjjHIGH_tight' :['Exponential','ExpPoly2'],
+    'M17_VHhad_loose'       :['Exponential','ExpPoly2'],
+    'M17_VHhad_tight'       :['Exponential','ExpPoly2'],
+    'M17_qqH_BSM'           :['Exponential','ExpPoly2'],
+    'M17_VHMET_LOW'         :['Exponential','ExpPoly2'],
+    'M17_VHMET_HIGH'        :['Exponential','ExpPoly2'],
+    'M17_VHMET_BSM'         :['Exponential','ExpPoly2'],
+    'M17_VHlep_LOW'         :['Pow','Pow2'],
+    'M17_VHlep_HIGH'        :['Exponential','ExpPoly2'],
+    'M17_VHdilep_LOW'       :['Pow','Pow2'],
+    }
+
 ##################################################################################
-def FitForChi2_DataSidebands(f) :
-    import Tools
+def FitForChi2_DataSidebands(f,ml=True) :
+    import ROOT
 
     #ROOT.gROOT.ProcessLine('.L Extras.h')
     #ROOT.gROOT.LoadMacro("rootlogon.C+")
     #rootlogon()
     #print list(ROOT.gROOT.GetListOfFunctions())
-    ROOT.gROOT.LoadMacro("Extras.h+")
-    ROOT.ListExtras()
+    #ROOT.ListExtras()
 
+#     f.obsVar.setRange("lower",105,120) ;
+#     f.obsVar.setRange("upper",130,160) ;
+
+    # initial state
+    f.BkgNormalization.setVal(f.datasb_rebinned.sumEntries())
     f.obsVar.setBins(f.datasb_rebinned.numEntries())
-    print f.datasb_rebinned.numEntries()
-    f.obsVar.setRange("lower",105,120) ; 
-    f.obsVar.setRange("upper",130,160) ; 
 
-#     args_datalimit_sideband = ROOT.RooLinkedList()
-#     blah2 = ROOT.RooFit.Extended(True)               ; args_datalimit_sideband.Add(blah2)
-    #blah3 = ROOT.RooFit.Minimizer('Minuit2','migrad'); args_datalimit_sideband.Add(blah3)
-#     blah3 = ROOT.RooFit.Minimizer('Minuit2')         ; args_datalimit_sideband.Add(blah3)
-#     blah3a= ROOT.RooFit.Strategy(2)                  ; args_datalimit_sideband.Add(blah3a)
-    #blah4 = ROOT.RooFit.Offset()                     ; args_datalimit_sideband.Add(blah4)
-    #blah5 = ROOT.RooFit.PrintEvalErrors(-1)          ; args_datalimit_sideband.Add(blah5)
-#     blah1 = ROOT.RooFit.Range("lower,upper")         ; args_datalimit_sideband.Add(blah1)
-#     blah6 = ROOT.RooFit.Save()                       ; args_datalimit_sideband.Add(blah6)
-    #blah7 = ROOT.RooFit.SumW2Error(False)            ; args_datalimit_sideband.Add(blah7)
-#     print 'just before this.',args_datalimit_sideband.Print("")
-#     printArgs(f.BkgArgList)
-    f.BkgNormalization.setVal(f.datahist.Integral())
-    f.workspace.Print()
-    #f.BkgNormalization.setConstant(False)
-    #SetBkgToConstant(f,False)
+    if ml :
+        f.function_ext.fitTo(f.datasb_rebinned
+                             ,ROOT.RooFit.Extended()
+                             #,ROOT.RooFit.Warnings(False)
+                             ,ROOT.RooFit.Range("lower,upper")
+                             #,ROOT.RooFit.DataError(ROOT.RooAbsData.Poisson)
+                             ,ROOT.RooFit.Minimizer('Minuit2','migrad')
+                             ,ROOT.RooFit.Strategy(2)
+                             )
+    else : # chi2
+        ROOT.gROOT.LoadMacro("Extras.h+")
+        ROOT.chi2FitTo_KB(f.function_ext,f.datasb_rebinned)
 
-    #f.function_ext.chi2FitTo(f.datasb_rebinned,args_datalimit_sideband)
-    #f.function_ext.chi2FitTo(f.datasb_rebinned,ROOT.RooFit.Range("lower,upper"),ROOT.RooFit.Extended(True))
-    Tools.ClearRooPlot(f.frame)
+    return
 
-    printArgs(f.BkgArgList)
-    ROOT.chi2FitTo_KB(f.function_ext,f.datasb_rebinned)
-#                       ROOT.RooFit.Range("lower,upper"),
-#                       ROOT.RooFit.Extended(True),
-#                       ROOT.RooFit.Strategy(2),
-#                       ROOT.RooFit.Minimizer('Minuit2'),
-#                       ROOT.RooFit.Save()
-#                       )
-#     f.function_ext.fitTo(f.datasb_rebinned,ROOT.RooFit.Range("lower,upper"),*(args_datalimit))
-    printArgs(f.BkgArgList)
+##################################################################################
+def NormalizeToSideband(f) :
+    import ROOT
 
+    tmp_data = f.function_ext.generateBinned(ROOT.RooArgSet(f.obsVar),ROOT.RooFit.ExpectedData(),ROOT.RooFit.Name("tmp_ftest_tmp_%s"%(f.name)))
 
-    #f.function_ext.chi2FitTo(f.af2_rebinned,args_datalimit_sideband) # lower,upper
-    f.function_ext.Print()
-    print f.BkgNormalization.getVal(),f.datahist.Integral()
+    tmp_integral = float(tmp_data.sumEntries("120>m_yy || m_yy>130"))
+    correction = 1.
+    norm = f.datasb_rebinned.sumEntries()*correction/float(tmp_integral)
 
-    f.datasb_rebinned.plotOn(f.frame)
-    #f.af2_rebinned.plotOn(f.frame)
-    f.function_ext.plotOn(f.frame,*plotOptions_sb)
-    c = ROOT.TCanvas('asdf','asdf',600,500)
-    f.frame.Draw()
-    raw_input('pause')
+    # print 'correction:',correction
+    # print 'tmp_integral:',tmp_integral
+    # print 'Normalization is',norm
+
+    f.BkgNormalization.setVal(f.BkgNormalization.getVal()*norm)
+
+    # tmp_data_2 = f.function_ext.generateBinned(ROOT.RooArgSet(f.obsVar),ROOT.RooFit.ExpectedData(),ROOT.RooFit.Name("tmp_ftest_tmp_%s"%(f.name)))
+    # c = ROOT.TCanvas()
+    # ClearRooPlot(f.frame)
+    # f.datasb_rebinned.plotOn(f.frame)
+    # tmp_data_2.plotOn(f.frame)
+    # f.function_ext.plotOn(f.frame,*(plotOptions_sb))
+    # f.frame.Draw()
+    # raw_input('asdf')
 
     return
 
@@ -75,7 +98,7 @@ def GetChiSquare_ForSpuriousSignal(frame,af2,function,ndof) :
 def ChiSquareToys_ForSpuriousSignal(f,outdir) :
     import Tools
     Tools.ClearRooPlot(f.frame)
-    f.obsVar.setBins(55)
+    f.obsVar.setBins(f.af2_rebinned.numEntries())
     h = ROOT.TH1F('p_chi2_hist','p_chi2_hist',10000,0,1)
     c2 = ROOT.TH1F('chi2_hist','chi2_hist',10000,0,5)
     #h_tmp = f.af2hist_not_rebinned.Clone()
@@ -152,6 +175,8 @@ def ChiSquareToys_ForSpuriousSignal(f,outdir) :
 
 ##################################################################################
 def GetChiSquare(frame,obsVar,f,data,ndof) :
+    import ROOT
+
     data.plotOn(frame,ROOT.RooFit.DataError(ROOT.RooAbsData.Poisson),ROOT.RooFit.Range("all"))
     f.plotOn(frame,ROOT.RooFit.Range("lower"),ROOT.RooFit.NormRange("lower"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
 
@@ -166,6 +191,23 @@ def GetChiSquare(frame,obsVar,f,data,ndof) :
     return chi2
 
 ##################################################################################
+def GetF(chi2,chi2_2,ndof_bins,ndof_bins_2,prob_hist=0,prob_hist_2=0) :
+    import ROOT
+
+    pvalue_chi2_sb = ROOT.TMath.Prob(chi2*(ndof_bins),ndof_bins)
+    pvalue_chi2_sb_2 = ROOT.TMath.Prob(chi2_2*(ndof_bins_2),ndof_bins_2)
+    if prob_hist :
+        prob_hist.Fill(pvalue_chi2_sb)
+    if prob_hist_2 :
+        prob_hist_2.Fill(pvalue_chi2_sb_2)
+    if chi2_2 == 0 :
+        return 0
+    ftest = (chi2*(ndof_bins) - chi2_2*(ndof_bins_2))/ float( chi2_2 )
+    if ftest < 0 :
+        ftest = 0
+    return ftest
+
+##################################################################################
 def LinkFunctionsForFtest(functions) :
     links = {
         'Exponential':'ExpPoly2',
@@ -177,106 +219,161 @@ def LinkFunctionsForFtest(functions) :
         }
     for f1 in functions :
         for f2 in functions :
-            if f2.name == links[f1.name] :
+            if f2.name == links.get(f1.name,'nothing') :
                 print 'linking %s as F to %s'%(f2.name,f1.name)
                 f1.ftest_function = f2
 
     return
 
 ##################################################################################
-def ToyFtest(function,function2) :
+def ToyFtest(function,function2,the_ftest,directory,ml=True) :
+    import ROOT
+    import Tools
+    import PlotFunctions as plotfunc
+
+    tmp_data_2 = function.function_ext.generateBinned(ROOT.RooArgSet(function.obsVar),ROOT.RooFit.ExpectedData(),ROOT.RooFit.Name("tmp_ftest_tmp_%s"%(function.name)))
+    c = ROOT.TCanvas()
+    Tools.ClearRooPlot(function.frame)
+    function.datasb_rebinned.plotOn(function.frame)
+    tmp_data_2.plotOn(function.frame)
+    function.frame.Draw()
+    #raw_input('asdf')
+
     #
     # Throw toys
     #
     chi2_hist = ROOT.TH1F('%s_chi2hist'%(function.name),'%s #chi^{2}'%(function.name),50,0,2)
     chi2_hist_2 = ROOT.TH1F('%s_chi2hist_2'%(function2.name),'%s #chi^{2}'%(function2.name),50,0,2)
-    prob_hist = ROOT.TH1F('%s_probhist'%(function.name),'%s prob'%(function.name),50,0,2)
-    prob_hist_2 = ROOT.TH1F('%s_probhist_2'%(function2.name),'%s prob'%(function2.name),50,0,2)
-    ftest_hist = ROOT.TH1F('%s_ftest_prob'%(function2.name),'ftest_prob',50,0,2)
-    fisher_dist = ROOT.TH1F('%s_fisher_dist'%(function.name),'fisher_dist',50,0,20)
-    fisher_func = ROOT.TH1F('%s_fisher_func'%(function.name),'fisher_func',5000,0,20)
+    prob_hist = ROOT.TH1F('%s_probhist'%(function.name),'%s p(#chi^{2})'%(function.name),50,0,2)
+    prob_hist_2 = ROOT.TH1F('%s_probhist_2'%(function2.name),'%s p(#chi^{2})'%(function2.name),50,0,2)
+    ftest_hist = ROOT.TH1F('%s_ftest_prob'%(function2.name),'1 - p(F)',50,0,2)
+    fisher_dist = ROOT.TH1F('%s_fisher_dist'%(function.name),'toys',5000,0,20)
+    fisher_func = ROOT.TH1F('%02d_%s_fisher_func'%(function.category,function.name),'F distribution',50000,0,20)
     #function.workspace.var('nBkg').setVal(function.workspace.var('nBkg').getVal()*100)
 
-    for i in range(2000) :
-        if not i%100 : print 'Ftest:',i
-        function.obsVar.setBins(function.datasb_rebinned.numEntries())
-        #print function.datasb_rebinned.numEntries()
-        toy_data = function.function_ext.generateBinned(ROOT.RooArgSet(function.obsVar),ROOT.RooFit.Extended(),ROOT.RooFit.Name("tmp_ftest_toy_%d_%s"%(i,function.name)))
-        #toy_data = function2.function_ext.generateBinned(ROOT.RooArgSet(function.obsVar),ROOT.RooFit.Extended(),ROOT.RooFit.Name("tmp_ftest_toy_%d_%s"%(i,function.name)))
-        initial_state = snapshot(function)
-        #function.function_ext.fitTo(toy_data,ROOT.RooFit.Warnings(False),ROOT.RooFit.PrintLevel(-1),ROOT.RooFit.Range("lower,upper"),*args_datalimit)
-        ROOT.chi2FitTo_KB(function.function_ext,toy_data)
-        reset_to_snapshot(function,initial_state)
-        chi2 = GetChiSquare(function.frame,function.obsVar,function.function_ext,toy_data,function.ndof)
-        #function2.function_ext.fitTo(toy_data,ROOT.RooFit.Warnings(False),ROOT.RooFit.PrintLevel(-1),ROOT.RooFit.Range("lower,upper"),*args_datalimit)
-        ROOT.chi2FitTo_KB(function2.function_ext,toy_data)
-        chi2_2 = GetChiSquare(function.frame,function2.obsVar,function2.function_ext,toy_data,function2.ndof)
+    nbins_blind = int(function.datasb_rebinned.numEntries()*9/11.)
 
-        ndof_bins = 55-1-function.ndof
-        ndof_bins_2 = 55-1-function2.ndof
-        pvalue_chi2_sb = ROOT.TMath.Prob(chi2*(ndof_bins),ndof_bins)
-        pvalue_chi2_sb_2 = ROOT.TMath.Prob(chi2_2*(ndof_bins_2),ndof_bins_2)
-        #chi2_hist.Fill(chi2)
+    ndof_bins = nbins_blind-function.ndof-1
+    ndof_bins_2 = nbins_blind-function2.ndof-1
+
+    # print 'Summary:'
+    # print 'function.ndof',function.ndof
+    # print 'function2.ndof',function2.ndof
+    # print 'ndof_bins',ndof_bins
+    # print 'ndof_bins_2',ndof_bins_2
+
+#     return fisher_dist
+
+    for i in range(500) :
+        if not i%100 : print 'Ftest:',i
+
+        toy_data = function.function_ext.generateBinned(ROOT.RooArgSet(function.obsVar),ROOT.RooFit.Extended(),ROOT.RooFit.Name("tmp_ftest_toy_%d_%s"%(i,function.name)))
+
+        initial_state = Tools.snapshot(function)
+        if ml :
+            function.function_ext.fitTo(toy_data,
+                                        ROOT.RooFit.Extended(),
+                                        ROOT.RooFit.Range("lower,upper"),
+                                        ROOT.RooFit.Minimizer('Minuit2','migrad'),
+                                        ROOT.RooFit.Strategy(2)
+                                        )
+        else :
+            ROOT.chi2FitTo_KB(function.function_ext,toy_data)
+        chi2 = GetChiSquare(function.frame,function.obsVar,function.function_ext,toy_data,ndof_bins)
+
+        # if i == 1 :
+        #     ClearRooPlot(function.frame)
+        #     c_toy = ROOT.TCanvas('%s'%(i),'asdf',600,500)
+        #     function.frame = function.obsVar.frame()
+        #     toy_data.plotOn(function.frame,ROOT.RooFit.MarkerColor(ROOT.kRed),ROOT.RooFit.Range("all"))
+        #     function.datasb_rebinned.plotOn(function.frame,ROOT.RooFit.Range("all"))
+        #     function.function_ext.plotOn(function.frame,ROOT.RooFit.Range("lower,upper"),ROOT.RooFit.NormRange("lower,upper"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
+        #     function2.function_ext.plotOn(function.frame,ROOT.RooFit.Range("lower,upper"),ROOT.RooFit.NormRange("lower,upper"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
+        #     function.frame.Draw()
+        #     raw_input('pause')
+
+        Tools.reset_to_snapshot(function,initial_state)
+
+
+        initial_state = Tools.snapshot(function2)
+        if ml :
+            function2.function_ext.fitTo(toy_data,
+                                         ROOT.RooFit.Extended(),
+                                         ROOT.RooFit.Range("lower,upper"),
+                                         ROOT.RooFit.Minimizer('Minuit2','migrad'),
+                                         ROOT.RooFit.Strategy(2)
+                                         )
+        else :
+            ROOT.chi2FitTo_KB(function2.function_ext,toy_data)
+        chi2_2 = GetChiSquare(function.frame,function2.obsVar,function2.function_ext,toy_data,ndof_bins_2)
+        Tools.reset_to_snapshot(function2,initial_state)
+
+        ftest = GetF(chi2,chi2_2,ndof_bins,ndof_bins_2,prob_hist,prob_hist_2)
+
         chi2_hist.Fill(chi2)
         chi2_hist_2.Fill(chi2_2)
-        prob_hist.Fill(pvalue_chi2_sb)
-        prob_hist_2.Fill(pvalue_chi2_sb_2)
-        ftest = (chi2*(ndof_bins) - chi2_2*(ndof_bins_2))/ float( chi2_2 )
         fisher_dist.Fill(ftest)
-        #p_ftest = 1.0 - ROOT.TMath.FDistI(ftest,1,ndof_bins_2)
-
-        # This one looked ok...
-        #p_ftest = 1.0 - ROOT.TMath.FDistI(ftest,ndof_bins,ndof_bins_2)
-
-        #p_ftest = 1.0 - ROOT.TMath.FDistI(ftest,1+function.ndof,1+function2.ndof) # closer
-        #p_ftest = 1.0 - ROOT.TMath.FDistI(ftest,function.ndof,function2.ndof) # closer
+        p_ftest = 1.0 - ROOT.TMath.FDistI(ftest,ndof_bins-ndof_bins_2,ndof_bins_2)
         ftest_hist.Fill(p_ftest)
 
-#         if i == 1 :
-#             c_toy = ROOT.TCanvas('%s'%(i),'asdf',600,500)
-#             function.frame = function.obsVar.frame()
-#             function.datasb_rebinned.plotOn(function.frame)
-#             toy_data.plotOn(function.frame,ROOT.RooFit.MarkerColor(ROOT.kRed))
-#             function.function_ext.plotOn(function.frame,ROOT.RooFit.Range("lower"),ROOT.RooFit.NormRange("lower"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
-#             function2.function_ext.plotOn(function.frame,ROOT.RooFit.Range("lower"),ROOT.RooFit.NormRange("lower"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
-#             function.frame.Draw()
-
+        del toy_data
 
     c = ROOT.TCanvas('c%02d_ftest_toy_%s'%(function.category,function.name),"toy study results, %s"%(function.name),600,500)
-    chi2_hist.Draw("E1")
+    chi2_hist.DrawNormalized("E1")
     chi2_hist_2.SetLineColor(ROOT.kRed+1);    chi2_hist_2.SetMarkerColor(ROOT.kRed+1)
-    chi2_hist_2.Draw("sames pE1")
+    chi2_hist_2.DrawNormalized("sames pE1")
 
     prob_hist  .SetLineColor(ROOT.kGreen+1);    prob_hist  .SetMarkerColor(ROOT.kGreen+1)
-    prob_hist  .Draw("sames pE1")
+    prob_hist  .DrawNormalized("sames pE1")
     prob_hist_2.SetLineColor(ROOT.kOrange+1);    prob_hist_2.SetMarkerColor(ROOT.kOrange+1)
-    prob_hist_2.Draw("sames pE1")
+    prob_hist_2.DrawNormalized("sames pE1")
     ftest_hist.SetLineColor(ROOT.kAzure+2);    ftest_hist.SetMarkerColor(ROOT.kAzure+2)
-    ftest_hist.Draw("sames pE1")
+    ftest_hist.DrawNormalized("sames pE1")
+    plotfunc.MakeLegend(c,0.71,0.72,0.81,0.93)
     plotfunc.AutoFixAxes(c)
-    plotfunc.MakeLegend(c)
+    plotfunc.AutoFixYaxis(c,minzero=True)
+
+    c.Print('%s/ChiSquares_%s.pdf'%(directory,c.GetName()))
+    c.Print('%s/ChiSquares_%s.C'%(directory,c.GetName()))
+
 
     d = ROOT.TCanvas('c%02d_fisherdist_%s'%(function.category,function.name),"toy study results, %s"%(function.name),600,500)
-    fdist2 = ROOT.TF1('1+npar',"TMath::FDist(x,1,%d)*[0]"%(ndof_bins_2),0.1,20)
+    d.SetLogy()
+    fdist2 = ROOT.TF1('1+npar',"TMath::FDist(x,%d,%d)*[0]"%(ndof_bins-ndof_bins_2,ndof_bins_2),0.00001,20)
     fdist2.SetTitle(fdist2.GetName())
     fdist2.SetParameter(0,0.4)
 
     for i in range(fisher_func.GetNbinsX()) :
         fisher_func.SetBinContent(i+1,fdist2.Eval(fisher_func.GetBinCenter(i+1)))
         fisher_func.SetBinError(i+1,0)
-    fisher_func.Rebin(100)
-    
+    fisher_func.Rebin(500)
 
-    fisher_dist.DrawNormalized("E1")
+
+    fisher_dist_clone = fisher_dist.Clone()
+    fisher_dist_clone.SetName(fisher_dist.GetName()+'_clone')
+    fisher_dist_clone.Rebin(50)
+    fisher_dist_clone.DrawNormalized("E1")
     fisher_func.SetMarkerColor(ROOT.kOrange+1)
     fisher_func.SetLineColor(ROOT.kOrange+1)
     fisher_func.DrawNormalized("E1sames")
 
-    fdist2.SetLineColor(ROOT.kRed+1)
-    fdist2.Draw("lsames")
-    plotfunc.MakeLegend(d)
-    plotfunc.AutoFixAxes(d)
-    
-    raw_input('pause')
-    return
 
+    # fdist2.SetLineColor(ROOT.kRed+1)
+    # fdist2.Draw("lsames")
+    from array import array
+    y = array('d',[fisher_func.GetBinContent(fisher_func.GetNbinsX())/fisher_func.Integral(),
+                   fisher_func.GetBinContent(fisher_func.FindBin(the_ftest))/fisher_func.Integral()])
+    a = ROOT.TGraph(2,array('d',[the_ftest,the_ftest+0.0001]),y)
+    a.SetName('Data sideband')
+    a.SetTitle('Data sideband')
+    a.SetLineWidth(2); a.SetLineColor(ROOT.kRed+1); a.SetFillColor(0)
+    a.Draw('l')
+
+    plotfunc.SetAxisLabels(d,'F-test statistic','nToys')
+    plotfunc.MakeLegend(d,0.69,0.75,0.83,0.90)
+    plotfunc.AutoFixAxes(d)
+
+    d.Print('%s/FtestToys_%s.pdf'%(directory,d.GetName()))
+    d.Print('%s/FtestToys_%s.C'%(directory,d.GetName()))
+
+    return fisher_dist
