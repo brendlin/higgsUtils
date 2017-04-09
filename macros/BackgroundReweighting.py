@@ -30,13 +30,13 @@ categories = [
     'M17_VHhad_loose',       # 15
     'M17_VHhad_tight',       # 16
     'M17_qqH_BSM',           # 17
-#     'M17_VHMET_LOW',         # 18
-#     'M17_VHMET_HIGH',        # 19
-#     'M17_VHMET_BSM',         # 20
-#     'M17_VHlep_LOW',         # 21
-#     'M17_VHlep_HIGH',        # 22
-#     'M17_VHdilep_LOW',       # 23
-#     'M17_VHdilep_HIGH',      # 24
+    'M17_VHMET_LOW',         # 18
+    'M17_VHMET_HIGH',        # 19
+    'M17_VHMET_BSM',         # 20
+    'M17_VHlep_LOW',         # 21
+    'M17_VHlep_HIGH',        # 22
+    'M17_VHdilep_LOW',       # 23
+    'M17_VHdilep_HIGH',      # 24
 #     'M17_ttH_Had_6j2b',      # 25
 #     'M17_ttH_Had_6j1b',      # 26
 #     'M17_ttH_Had_5j2b',      # 27
@@ -59,7 +59,7 @@ def DoRescaleProcedure(af2,bkg,name,ci,c) :
     if integral(bkg,105,160) == 0 :
         return [],0,1,1
 
-    cans.append(plotfunc.RatioCanvas('UntouchedRatio_%d_%s_%s'%(ci,c,name),'%d_%s_%s'%(ci,c,name),500,500))
+    cans.append(plotfunc.RatioCanvas('UntouchedRatio_%02d_%s_%s'%(ci,c,name),'%d_%s_%s'%(ci,c,name),600,500))
     af2_rebin = plotfunc.AddHistogram(cans[-1],af2)
     bkg_rebin = bkg.Clone()
     bkg_rebin.SetName(bkg_rebin.GetName()+'_forRebinning')
@@ -100,12 +100,12 @@ def DoRescaleProcedure(af2,bkg,name,ci,c) :
     af2_before.SetFillColor(ROOT.kGray)
     af2_result.Rebin(10)
     bkg.Rebin(10)
-    bkg.SetTitle(name.replace('y','#gamma '))
+    bkg.SetTitle(name.replace('y','#gamma^{}'))
     if integral(af2_result,105,160) :
         af2_before.Scale(integral(bkg,105,160)/integral(af2_before,105,160))
         af2_result.Scale(integral(bkg,105,160)/integral(af2_result,105,160))
 
-    cans.append(plotfunc.RatioCanvas('rescaled_%d_%s_%s'%(ci,c,name),'%d_%s_%s_rescaled'%(ci,c,name),500,500))
+    cans.append(plotfunc.RatioCanvas('rescaled_%02d_%s_%s'%(ci,c,name),'%d_%s_%s_rescaled'%(ci,c,name),600,500))
     plotfunc.AddHistogram(cans[-1],af2_before)
     plotfunc.AddHistogram(cans[-1],bkg)
     plotfunc.AddRatio(cans[-1],af2_result,bkg,divide='pull')
@@ -135,6 +135,9 @@ def main(options,args) :
         af2 = af2_file.Get('HGamEventInfoAuxDyn_m_yy_over_1000_c%d_%s_AF2' %(i+offset,c)).Clone()
         yj  = yj_file .Get('HGamEventInfoAuxDyn_m_yy_over_1000_c%d_%s_data'%(i+offset,c))
         jj  = jj_file .Get('HGamEventInfoAuxDyn_m_yy_over_1000_c%d_%s_data'%(i+offset,c))
+
+#         print c, af2.Integral(), yj.Integral(), jj.Integral()
+#         continue
 
         data_blinded = af2_file.Get('HGamEventInfoAuxDyn_m_yy_over_1000_c%d_%s_data'%(i+offset,c))
         higgs        = af2_file.Get('HGamEventInfoAuxDyn_m_yy_over_1000_c%d_%s_Higgs'%(i+offset,c))
@@ -169,6 +172,10 @@ def main(options,args) :
         data_integral = float(integral(data_blinded,105,120) + integral(data_blinded,130,160) )
         af2_integral = float(integral(af2,105,120)+integral(af2,130,160) )
 
+        if af2_integral == 0 :
+            print 'ERROR! AF2 Integral for category %s is 0!'%(c)
+            return
+
         rebin = 10
 
         # yy for stack
@@ -178,7 +185,7 @@ def main(options,args) :
 
         # yj for stack
         af2_yj_stack = af2.Clone(); af2_yj_stack.SetName(af2_yj_stack.GetName()+'_yj_forStack')
-        af2_yj_stack.SetTitle('#gamma j')
+        af2_yj_stack.SetTitle('#gamma^{}#font[12]{j}')
         function_yj = ROOT.TF1('%d_%s'%(i+offset,c),'([0]*(x-132.5)/(160-105) + [1])*[2]*[3]',105,160)
         function_yj.SetParameters(yj_par0,yj_par1,yj_frac,yj_integral_factor)
         function_yj.SetRange(af2.GetBinLowEdge(1),af2.GetBinLowEdge(af2.GetNbinsX()+1))
@@ -188,7 +195,7 @@ def main(options,args) :
 
         # jj for stack
         af2_jj_stack = af2.Clone(); af2_jj_stack.SetName(af2_jj_stack.GetName()+'_jj_forStack')
-        af2_jj_stack.SetTitle('jj')
+        af2_jj_stack.SetTitle('#font[12]{jj}')
         function_jj = ROOT.TF1('%d_%s'%(i+offset,c),'([0]*(x-132.5)/(160-105) + [1])*[2]*[3]',105,160)
         function_jj.SetParameters(jj_par0,jj_par1,jj_frac,jj_integral_factor)
         function_jj.SetRange(af2.GetBinLowEdge(1),af2.GetBinLowEdge(af2.GetNbinsX()+1))
@@ -203,7 +210,7 @@ def main(options,args) :
         af2.Multiply(function)
         af2.Scale( data_integral / float(integral(af2,105,120)+integral(af2,130,160) ) )
 
-        main_can = plotfunc.RatioCanvas('Mimic_Plot_%s_%s'%(i+offset,c),'Mimic plot',500,500)
+        main_can = plotfunc.RatioCanvas('Mimic_Plot_%02d_%s'%(i+offset,c),'Mimic plot',600,500)
         plotfunc.AddHistogram(main_can,af2_jj_stack)
         plotfunc.AddHistogram(main_can,af2_yj_stack)
         plotfunc.AddHistogram(main_can,af2_yy_stack)
@@ -216,6 +223,7 @@ def main(options,args) :
         af2.Rebin(rebin)
         data_blinded.Rebin(rebin)
         data_blinded.SetTitle('Data')
+        #data_blinded.SetBinErrorOption(ROOT.TH1.kPoisson);
         af2.SetMarkerSize(0); af2.SetLineColor(1); af2.SetLineWidth(2); af2.SetFillColor(1)
         af2.SetFillStyle(3254);
         af2.SetTitle('SM')
@@ -229,10 +237,16 @@ def main(options,args) :
             # PULL
             plotfunc.AddRatio(main_can,data_blinded,af2,divide='pull')
             taxisfunc.SetYaxisRanges(plotfunc.GetBotPad(main_can),-3.5,4.5)
+
+        the_text = [plotfunc.GetAtlasInternalText(),
+                    plotfunc.GetSqrtsText(13)+', '+plotfunc.GetLuminosityText(36.1),
+                    Tools.CategoryNames[c]
+                    ]
+        plotfunc.DrawText(main_can,the_text,.2,.67,.61,.90,totalentries=3)
+        plotfunc.MakeLegend(main_can,0.70,0.67,0.92,0.90,ncolumns=2,option=['f','f','f','f','p'])
         taxisfunc.SetXaxisRanges(main_can,105,160)
         taxisfunc.AutoFixYaxis(plotfunc.GetTopPad(main_can),minzero=True)
-        plotfunc.SetAxisLabels(main_can,'m_{#gamma#gamma} [GeV]','entries')
-        plotfunc.MakeLegend(main_can,0.68,0.73,0.89,0.90,ncolumns=2,option=['f','f','f','f','p'])
+        plotfunc.SetAxisLabels(main_can,'m_{#gamma#gamma} [GeV]','entries','pull')
         tmp.append(main_can)
 
         for can in tmp :
@@ -242,12 +256,14 @@ def main(options,args) :
         os.system('mkdir -p c%02d_%s'%(i,c))
         for can in tmp :
             can.Print('c%02d_%s/%s.pdf'%(i,c,can.GetName()))
+            can.Print('c%02d_%s/%s.eps'%(i,c,can.GetName()))
 
         cans += yj_newcans
         cans += jj_newcans
 
 
-    raw_input('pause')
+        if not options.batch :
+            raw_input('pause')
 
     return
 
