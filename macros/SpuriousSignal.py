@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 import ROOT
 import math
@@ -13,7 +14,7 @@ ROOT.RooMsgService.instance().setSilentMode(True)
 
 def main_singleCategory(options,args) :
 
-    if options.category in [21,22,23,30,31] :
+    if options.category in [30,31] :
         print 'Error! Too few AF2 stats. Not going to do it.'
         return
 
@@ -26,11 +27,17 @@ def main_singleCategory(options,args) :
         options.outdir += '_'.join(flist)
 
     elif options.family == 'official' :
-        flist = ['exppoly','exppoly2','Bernstein_4','Bernstein_5','PowerSum1','Laurent0','Laurent1','Laurent2']
+        #flist = ['Exponential','ExpPoly2','ExpPoly3','Bern4','Bern5','Pow','Pow2','Laurent0','Laurent1','Laurent2']
+        flist = ['Exponential','ExpPoly2','Bern4','Bern5','Pow','Pow2','Laurent1','Laurent2']
         options.outdir += 'official_functions'
 
-    elif options.family == 'exppoly' :
-        flist = ['exppoly'] + list('exppoly%d'%(d) for d in range(2,3))
+    elif options.family == 'selected' :
+        flist = [Tools.selected[Tools.categories[options.category]]]
+        options.outdir += 'selected_functions'
+        print flist
+
+    elif options.family == 'ExpPoly' :
+        flist = ['Exponential'] + list('ExpPoly%d'%(d) for d in range(2,4))
         options.outdir += 'exppoly_family'
 
     elif options.family == 'Laurent' :
@@ -42,18 +49,18 @@ def main_singleCategory(options,args) :
         options.outdir += 'PolyOverX4_family'
 
     elif options.family == 'Bernstein' :
-        flist = list('Bernstein_%d'%(d) for d in range(4,6))
-        options.outdir += 'Bernstein_family'
+        flist = list('Bern%d'%(d) for d in range(4,6))
+        options.outdir += 'Bern_family'
 
     elif options.family == 'PowerSum' :
-        flist = ['PowerSum1','PowerSum2']
+        flist = ['Pow','Pow2']
         options.outdir += 'PowerSum_family'
 
     else :
         flist = [
-            'exppoly', # bad
-            'exppoly2',
-            'exppoly3',
+            'Exponential', # bad
+            'ExpPoly2',
+            'ExpPoly3',
             ]
         options.outdir += '_'.join(flist)
 
@@ -61,16 +68,19 @@ def main_singleCategory(options,args) :
 
     functions = []
     Tools.PopulateFunctionList(functions,flist)
+    Tools.LinkFunctionsForFtest(functions)
     if len(functions) == 0 :
         print 'Error! no functions loaded!'
         import sys; sys.exit()
 
     for f in functions :
         f.SetCategory(options.category)
+        f.SetFileName(options.file)
+        f.SetSignalWS(options.signalws)
         f.Initialize()
 
 
-    cans.append(ROOT.TCanvas("c%02d_error_summary"%(options.category),"error_summary",500,400))
+    cans.append(ROOT.TCanvas("c%02d_error_summary"%(options.category),"error_summary",600,500))
     ##
     ## Spurious signal Z, Mu
     ##
@@ -99,7 +109,7 @@ def main_singleCategory(options,args) :
     for i,f in enumerate(functions) :
         injected_hist.SetBinContent(i+1,Tools.GetSignalBiasMuScan(f,index=i))
     injected_hist.SetLineStyle(2)
-    plotfunc.AddHistogram(cans[-1],injected_hist,drawopt='hist')
+    #plotfunc.AddHistogram(cans[-1],injected_hist,drawopt='hist')
 
     ## Systematic with injection - 125 GeV
 #     injected_hist_125 = ROOT.TH1F('injected_hist_125','injection syst 125',len(flist),0,len(flist))
@@ -111,10 +121,10 @@ def main_singleCategory(options,args) :
     ## Error on the signal (in the injection case) - only 125
     error_hist_inj = ROOT.TH1F('error_hist_inj','stat (inject SM)',len(flist),0,len(flist))
     for i,f in enumerate(functions) :
-        error_hist_inj.SetBinContent(i+1,f.injectionerror/float(f.smsignalyield.getVal())) # only 125
+        error_hist_inj.SetBinContent(i+1,f.injectionerror_rel) # only 125
     cans[-1].cd()
     error_hist_inj.SetLineStyle(2)
-    plotfunc.AddHistogram(cans[-1],error_hist_inj,drawopt='hist')
+    #plotfunc.AddHistogram(cans[-1],error_hist_inj,drawopt='hist')
 
     plotfunc.SetColors(cans[-1])
     plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
@@ -128,7 +138,7 @@ def main_singleCategory(options,args) :
     ##
     ## Spurious signal mu canvas
     ##
-    cans.append(ROOT.TCanvas("c%02d_spurious_signal_mu"%(options.category),"spurious signal mu",500,400))
+    cans.append(ROOT.TCanvas("c%02d_spurious_signal_mu"%(options.category),"spurious signal mu",600,500))
     
     functions[0].spurioussignalmucv.Draw('al')
     functions[0].spurioussignalmuup.Draw('l')
@@ -141,11 +151,7 @@ def main_singleCategory(options,args) :
     plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','S_{spur}/S_{SM}')
     taxisfunc.SetYaxisRanges(cans[-1],-0.5,0.5)
     taxisfunc.SetXaxisRanges(cans[-1],110,160)
-    a = ROOT.TLine(); a.DrawLine(121,-0.1,129,-0.1)
-    a.DrawLine(121, 0.1,129, 0.1)
-    a.DrawLine(121,-0.1,121, 0.1)
-    a.DrawLine(129,-0.1,129, 0.1)
-
+    Tools.DrawBox(121,129,-0.1,0.1)
 
 
 
@@ -153,7 +159,7 @@ def main_singleCategory(options,args) :
     ##
     ## Stats-limited spurious signal mu canvas
     ##
-    cans.append(ROOT.TCanvas("c%02d_spurious_signal_mu_statlim"%(options.category),"spurious signal mu (stat-limited)",500,400))
+    cans.append(ROOT.TCanvas("c%02d_spurious_signal_mu_statlim"%(options.category),"spurious signal mu (stat-limited)",600,500))
     functions[0].spurioussignalmucomp.Draw('al')
     for i,f in enumerate(functions[1:]) :
         f.spurioussignalmucomp.Draw('l')
@@ -161,10 +167,7 @@ def main_singleCategory(options,args) :
     plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','S_{spur}/S_{SM}')
     taxisfunc.SetYaxisRanges(cans[-1],-0.5,0.5)
     taxisfunc.SetXaxisRanges(cans[-1],110,160)
-    a = ROOT.TLine(); a.DrawLine(121,-0.1,129,-0.1)
-    a.DrawLine(121, 0.1,129, 0.1)
-    a.DrawLine(121,-0.1,121, 0.1)
-    a.DrawLine(129,-0.1,129, 0.1)
+    Tools.DrawBox(121,129,-0.1,0.1)
 
 
 
@@ -173,7 +176,7 @@ def main_singleCategory(options,args) :
     ##
     ## Spurious signal Z canvas
     ##
-    cans.append(ROOT.TCanvas("c%02d_spurious_signal_z"%(options.category),"spurious signal z",500,400))
+    cans.append(ROOT.TCanvas("c%02d_spurious_signal_z"%(options.category),"spurious signal z",600,500))
     functions[0].spurioussignalzcv.Draw('al')
     functions[0].spurioussignalzup.Draw('l')
     functions[0].spurioussignalzdn.Draw('l')
@@ -185,11 +188,24 @@ def main_singleCategory(options,args) :
     plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
     taxisfunc.SetYaxisRanges(cans[-1],-1.0,1.0)
     taxisfunc.SetXaxisRanges(cans[-1],110,160)
-    a = ROOT.TLine();
-    a.DrawLine(121,-0.2,129,-0.2)
-    a.DrawLine(121, 0.2,129, 0.2)
-    a.DrawLine(121,-0.2,121, 0.2)
-    a.DrawLine(129,-0.2,129, 0.2)
+    Tools.DrawBox(121,129,-0.2,0.2)
+
+
+
+
+    ##
+    ## Stats-limited spurious signal z canvas
+    ##
+    cans.append(ROOT.TCanvas("c%02d_spurious_signal_z_statlim"%(options.category),"spurious signal Z (stat-limited)",600,500))
+    functions[0].spurioussignalzcomp.Draw('al')
+    for i,f in enumerate(functions[1:]) :
+        f.spurioussignalzcomp.Draw('l')
+    plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
+    plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','S_{spur}/S_{SM}')
+    taxisfunc.SetYaxisRanges(cans[-1],-0.5,0.5)
+    taxisfunc.SetXaxisRanges(cans[-1],110,160)
+    Tools.DrawBox(121,129,-0.2,0.2)
+
 
 
 
@@ -197,7 +213,7 @@ def main_singleCategory(options,args) :
     ##
     ## Injected signal bias canvas
     ##
-    cans.append(ROOT.TCanvas("c%02d_signal_bias_mu"%(options.category),"signal bias mu",500,400))
+    cans.append(ROOT.TCanvas("c%02d_signal_bias_mu"%(options.category),"signal bias mu",600,500))
     functions[0].signalbiasmucv.Draw('al')
     #functions[0].signalbiasmuup.Draw('l')
     #functions[0].signalbiasmudn.Draw('l')
@@ -209,57 +225,105 @@ def main_singleCategory(options,args) :
     plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
     taxisfunc.SetYaxisRanges(cans[-1],-0.5,0.5)
     taxisfunc.SetXaxisRanges(cans[-1],110,160)
-    a = ROOT.TLine();
-    a.DrawLine(121,-0.1,129,-0.1)
-    a.DrawLine(121, 0.1,129, 0.1)
-    a.DrawLine(121,-0.1,121, 0.1)
-    a.DrawLine(129,-0.1,129, 0.1)
+    Tools.DrawBox(121,129,-0.1,0.1)
+
+
+
+
+
 
     ##
-    ## Plot the data and af2 (fit bkg-only just before this.)
+    ## Toy study canvases
     ##
-    cans.append(plotfunc.RatioCanvas("c%02d_mainplot"%(options.category),"main plot",500,400))
-    functions[0].af2hist.SetMarkerSize(0)
-    plotfunc.AddHistogram(cans[-1],functions[0].af2hist,drawopt='')
-    plotfunc.AddHistogram(cans[-1],functions[0].higgshist,drawopt='')
-    plotfunc.AddHistogram(cans[-1],functions[0].datahist)
-    for i in plotfunc.GetTopPad(cans[-1]).GetListOfPrimitives() :
-        if hasattr(i,'Rebin') :
-            i.Rebin(functions[0].rebin)
+#     for f in functions :
+#         cans.append(Tools.ToyInjectedSignalBias(f,functions[0].deltas_relative,inject_signal=True))
+#         plotfunc.SetAxisLabels(cans[-1],'S/S_{ref} (signal)','n toys')
+#         cans.append(Tools.ToyInjectedSignalBias(f,functions[0].deltas_relative,inject_signal=False))
+#         plotfunc.SetAxisLabels(cans[-1],'S/S_{ref} (no signal)','n toys')
+
+
+
+
+
+
+    ##
+    ## Plot the data and af2 (fit bkg-only just before this.) SpuriousSignal_05_M17_ggH_1J_BSM
+    ##
     for f in functions :
-        roofitresult = f.function.fitTo(f.data,*(Tools.args_bkgonly))
-        f.function.plotOn(f.frame_rebinned)
-        # Get the chi2 from the background-only fit
-        f.chisquare = f.frame_rebinned.chiSquare(1) # n-1 bins
+        f.function.fitTo(f.data,*(Tools.args_bkgonly))
+    cans.append(plotfunc.RatioCanvas("TemplateFit_%02d_%s"%(options.category,Tools.categories[options.category]),"main plot",600,500))
+    functions[0].af2hist.SetMarkerSize(0)
+    #rebin = Tools.RebinUntilSmallErrors(functions[0].af2hist,0,Tools.lower_range,Tools.upper_range,errormax=0.3)
+    rebin = 10
+    functions[0].af2hist.Rebin(rebin)
+    binwidth = functions[0].af2hist.GetBinWidth(1)
+    bins = int((Tools.upper_range-Tools.lower_range)/float(binwidth))
+    functions[0].af2hist.SetTitle('#gamma#gamma MC')
+    functions[0].af2hist.SetLineWidth(2)
+    if options.family == 'selected' :
+        functions[0].af2hist.SetLineColor(ROOT.kGray+2)
+        functions[0].af2hist.SetFillColor(0)
+    plotfunc.AddHistogram(cans[-1],functions[0].af2hist,drawopt='')
+    for i,f in enumerate(functions) :
+        f.obsVar.setBins(int(bins))
+        f.bins = bins
+        f.frame = f.obsVar.frame()
+        if i :
+            f.af2hist.Rebin(rebin)
+        f.af2_rebinned = ROOT.RooDataHist('af2_rebinned','',ROOT.RooArgList(f.obsVar),f.af2hist,1.)
+        #f.af2_rebinned.plotOn(f.frame,ROOT.RooFit.Range("lower,upper"))
+        #f.function.plotOn(f.frame,ROOT.RooFit.NormRange("lower,upper"),ROOT.RooFit.Range("all"))
+        f.chisquare = Tools.GetChiSquare_ForSpuriousSignal(f.frame,f.af2_rebinned,f.function,f.ndof)
+        print 'Original chi2:',f.chisquare
+        #f.chisquare_toy = Tools.ChiSquareToys_ForSpuriousSignal(f)
         f.minNll = 0
-        f.pvalue_chi2 = ROOT.TMath.Prob(f.chisquare*(f.bins_rebinned-1),f.bins_rebinned-1)
-        curve = f.frame_rebinned.getCurve(); curve.SetMarkerSize(0); curve.SetLineWidth(1)
+        f.pvalue_chi2 = ROOT.TMath.Prob(f.chisquare*(f.bins-1-f.ndof),f.bins-1-f.ndof)
+        curve = f.frame.getCurve(); curve.SetMarkerSize(0); curve.SetLineWidth(1)
         curve.SetTitle(f.name)
-        resid = f.frame_rebinned.residHist(); resid.SetMarkerSize(0)
-        plotfunc.AddRatioManual(cans[-1],curve,resid,drawopt1='l',drawopt2='l')
-        del roofitresult
-    plotfunc.SetColors(cans[-1])
-    plotfunc.MakeLegend(cans[-1],.6,.40,.9,.9)
-    plotfunc.SetXaxisRanges(cans[-1],Tools.lower_range,Tools.upper_range)
-    taxisfunc.AutoFixYaxis(plotfunc.GetTopPad(cans[-1]),ignorelegend=True)
+        curve.SetLineWidth(2)
+#         resid = f.frame.residHist(); resid.SetMarkerSize(0)
+#         plotfunc.AddRatioManual(cans[-1],curve,resid,drawopt1='l',drawopt2='l')
+        pull = f.frame.pullHist(); pull.SetMarkerSize(0.7)
 
-    ##
-    ## Plot all the functions
-    ##
-#     if False :
-#         cans.append(ROOT.TCanvas('fit_canvas','fit_canvas',725,500))
-#         common_frame = functions[0].frame
-#         functions[0].data.plotOn(common_frame)
-#         for f in functions :
-#             f.function.fitTo(f.data,*(Tools.args_bkgonly))
-#             f.selectedpdf.SetName('%s fit total'%f.name)
-#             f.selectedpdf.SetTitle(f.name)
-#             f.workspace.var("nSignal").setVal(f.smsignalyield.getVal())
-#             f.selectedpdf.plotOn(common_frame,ROOT.RooFit.Range("FULL"))
-#             dummy = ROOT.RooArgSet(); dummy.add(f.function)
-#             f.selectedpdf.plotOn(common_frame,ROOT.RooFit.Components(dummy),ROOT.RooFit.Range("FULL"),ROOT.RooFit.LineStyle(ROOT.kDashed))
-#         functions[0].nomfunction.plotOn(common_frame)
-#         common_frame.Draw()
+        # for special
+        if options.family == 'selected' :
+            color = {
+                'Pow'         : ROOT.kBlack+0,
+                'Exponential' : ROOT.kRed+1,
+                'ExpPoly2'    : ROOT.kBlue+1,
+                'Bern3'       : ROOT.kGreen+1,
+                'Bern4'       : ROOT.kMagenta+1,
+                'Bern5'       : ROOT.kOrange+1,
+                }.get(f.name)
+            pull.SetMarkerColor(color); pull.SetLineColor(color);
+            curve.SetLineColor(color); curve.SetFillColor(0)
+        
+        plotfunc.AddRatioManual(cans[-1],curve,pull,drawopt1='l',drawopt2='p')
+
+    if not options.family == 'selected' :
+        plotfunc.SetColors(cans[-1])
+    plotfunc.FormatCanvasAxes(cans[-1])
+    plotfunc.SetXaxisRanges(cans[-1],Tools.lower_range,Tools.upper_range)
+    plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','entries','pull')
+    the_text = [plotfunc.GetAtlasInternalText()
+                ,plotfunc.GetSqrtsText(13)+', '+plotfunc.GetLuminosityText(36.1)
+                ,Tools.CategoryNames[Tools.categories[options.category]]]
+    plotfunc.DrawText(cans[-1],the_text,0.19,0.70,0.59,0.91,totalentries=3)
+    plotfunc.MakeLegend(cans[-1]       ,0.60,0.70,0.90,0.91,totalentries=3)
+    #plotfunc.GetTopPad(cans[-1]).GetPrimitive('legend').AddEntry(0,'^{ }background-only fit','')
+    #list(plotfunc.GetTopPad(cans[-1]).GetPrimitive('legend').GetListOfPrimitives())[-1].SetLabel('^{ }background-only fit')
+    plotfunc.SetYaxisRanges(plotfunc.GetBotPad(cans[-1]),-4,4)
+    taxisfunc.AutoFixYaxis(plotfunc.GetTopPad(cans[-1]),ignorelegend=False,minzero=True)
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -270,53 +334,77 @@ def main_singleCategory(options,args) :
     if not os.path.exists(options.outdir) :
         os.makedirs(options.outdir)
     a = open('%s/parameters.txt'%(options.outdir),'w')
+    a.write(options.file+'\n')
+    a.write(options.signalws+'\n')
     for f in functions :
         a.write(f.PrintParameters())
         a.write('\n')
     chi = u"\u03C7"
-    header = '{:<15} {:^10} {:^10} {:^7} {:^10} {:^10} {:^10} {:^10} {:^6} {:^10}'
-    header = header.format('c%d Function'%(options.category),'Sspur/Ssmh','Sspur/DS','Result','Relax spur','chi2','p(chi2)','tot err','Newult','minNll')
-    print header
-    #
-    # Choiose the write function
-    #
-    choice = []
-    choice_new = []
-    def sortnew(item) :
-        return item[1]
-    def sortold(item) :
-        return item[2]
+    header = '{:<15} {:>10} {:>10} {:>12} {:>12} {:>10} {:>6} {:>10} {:>10} {:>10} {:>10} {:>10} {:>6}'
+    header = header.format('c%d Function'%(options.category),'Sspur/Ssmh','inj bias','Toy bias','ToyNoSig','Sspur/DS','Result','Relax spur','Relax DS','chi2','p(chi2)','tot err','Newult')
     a.write(header+'\n')
+    print header
     for f in functions :
         a.write(f.PrintSpuriousSignalStudy()+'\n')
-        if f.passes_new :
-            choice_new.append([f.name,f.total_error,f.ndof])
-        if f.passes :
-            choice.append([f.name,f.total_error,f.ndof])
-    print choice
-    choice = sorted(choice,key=sortold)
+    print
+
+    header = '{:<15} {:>10} {:>10} {:>12} {:>10} {:>10} {:>12} {:>6} {:>6} {:>10} {:>10}'
+    header = header.format('c%d Function'%(options.category),'stat err','Toy stat0','Toy sigma0','inj stat','Toy stat','Toy sigma','nfail','nfnsig','chi2sb','p(sb)')
+    a.write(header+'\n')
+    print header
+    for f in functions :
+        a.write(f.PrintAdditionalStatInfo()+'\n')
+
+
+    #
+    # Choose the right function
+    #
+    # sorted by old criteria
     result = ''
-    if choice :
-        for c in choice :
-            if c[2] == choice[0][2] :
-                result += 'Old test picked %s with total uncertainty %2.2f %%\n'%(c[0],c[1]*100)
+    functions = sorted(functions,key = lambda x: (not x.passes,x.ndof,math.fabs(x.max_spur_signalmu)))
+    old_function = 'NONE'
+    if functions[0].passes :
+        old_function = functions[0].name
+        result += 'Old test picked %s with total uncertainty %2.2f %%\n'%(functions[0].name,functions[0].total_error*100)
     else :
         result += 'NO OLD FUNCTION\n'
-    choice_new = sorted(choice_new,key=sortnew)
-    if choice_new :
-        result_new = 'New test picked %s with total uncertainty %2.2f %%\n'%(choice_new[0][0],choice_new[0][1]*100)
+
+    # sorted by new criteria
+    new_function = 'NONE'
+    functions = sorted(functions,key = lambda x: (not x.passes_new,x.total_error))
+    if functions[0].passes_new :
+        result_new = 'New test picked %s with total uncertainty %2.2f %%\n'%(functions[0].name,functions[0].total_error*100)
     else :
         result_new = 'NO NEW FUNCTION\n'
+
+    summary = '{:<15} & {:<15} & {:<15} & {:9.2f}\% & {:9.2f}\% & {:9.2f}\% & {:9.2f}\% \\\\\n'
+    f = functions[0]
+    if functions[0].passes_new :
+        summary = summary.format(Tools.categories[options.category].replace('_','\_'),
+                                 old_function,
+                                 f.name,
+                                 f.max_spur_signalz*100.,
+                                 f.max_spur_signalz_compatible*100,
+                                 f.max_spur_signalmu*100.,
+                                 f.max_spur_signalmu_compatible*100.,
+                                 )
+    else :
+        summary = summary.format(Tools.categories[options.category].replace('_','\_'),old_function,'NONE',0,0,0,0)
+
     a.write(result)
     a.write(result_new)
+    a.write(summary)
     print result
     print result_new
+    print summary
+
     a.close()
+
 
     for can in cans[:-1] :
         plotfunc.FormatCanvasAxes(can)
 
-    anaplot.UpdateCanvases(options,cans)
+    anaplot.UpdateCanvases(cans,options)
     if not options.batch :
         raw_input('Press enter to exit')
     anaplot.doSaving(options,cans)
@@ -328,17 +416,25 @@ if __name__ == '__main__':
     from optparse import OptionParser
     p = OptionParser()
     p.add_option('--category','--c',type='string',default='',dest='category',help='category (0-30something)')
-    p.add_option('--family',type='string',default='',dest='family',help='functions exppoly,exppoly2,blah')
-    p.add_option('--functions','--f',type='string',default='',dest='functions',help='functions exppoly,exppoly2,blah')
+    p.add_option('--family',type='string',default='',dest='family',help='families: official,selected,ExpPoly,Laurent,PolyOverX4,Bernstein,PowerSum')
+    p.add_option('--functions','--f',type='string',default='',dest='functions',help='functions Exponential,ExpPoly2,blah')
     p.add_option('--batch',action='store_true',default=False,dest='batch',help='run in batch mode')
     p.add_option('--save',action='store_true',default=False,dest='save',help='save cans to pdf')
-    
+
+    p.add_option('--signalws',type='string',default='',dest='signalws',help='e.g. res_SM_DoubleCB_workspace_me.root')
+    p.add_option('--file',type='string',default='',dest='file',help='file (in which the histogram is contained)')
+
     options,args = p.parse_args()
 
     ROOT.gROOT.SetBatch(options.batch)
 
+    if not options.signalws :
+        print 'Error! Specify signal workspace! Exiting.'; import sys; sys.exit()
+    if not options.file :
+        print 'Error! Specify file with histograms. Exiting.'; import sys; sys.exit()
+
     if options.category == 'all' :
-        for i in range(0,33) :
+        for i in range(0,17) :
             options.category = int(i)
             main_singleCategory(options,args)
     else :
