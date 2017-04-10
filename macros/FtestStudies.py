@@ -78,15 +78,9 @@ def main_singleCategory(options,args) :
         print 'Error! no functions loaded!'
         import sys; sys.exit()
 
-    print 'did I do anything?'
-    print functions[0].PrintParameters()
-    print functions[1].PrintParameters()
-    print 'did I do anything?'
-
     for f in functions :
         f.SetCategory(options.category)
         f.SetFileName(options.file)
-        f.SetSignalWS(options.signalws)
         f.Initialize()
 
 #     print functions[0].smsignalyield.getVal()
@@ -108,6 +102,7 @@ def main_singleCategory(options,args) :
     ftest_text = ''
 
     cans.append(plotfunc.RatioCanvas("Ftests_%02d_%s"%(options.category,Tools.categories[options.category]),"main plot",600,500))
+    functions[0].datahist.SetBinErrorOption(ROOT.TH1.kPoisson)
     plotfunc.AddHistogram(cans[-1],functions[0].datahist)
     ##
     ## Ftests to sideband
@@ -123,6 +118,9 @@ def main_singleCategory(options,args) :
         ndof_bins = nbins_blind-f.ndof
         ndof_bins_2 = nbins_blind-f.ftest_function.ndof
 
+        #
+        # Fitting data sidebands - first function
+        #
         print 'Fitting data sidebands'
         print f.PrintParameters()
         ChiSquareTools.FitForChi2_DataSidebands(f)
@@ -132,6 +130,9 @@ def main_singleCategory(options,args) :
         chi2 = ChiSquareTools.GetChiSquare(f.frame,f.obsVar,f.function_ext,f.datasb_rebinned,ndof_bins)
         pvalue_chi2 = ROOT.TMath.Prob(chi2*(ndof_bins),ndof_bins)
 
+        #
+        # Plotting stuff - first function
+        #
         Tools.ClearRooPlot(f.frame)
         ChiSquareTools.NormalizeToSideband(f)
         f.datasb_rebinned.plotOn(f.frame,ROOT.RooFit.DataError(ROOT.RooAbsData.Poisson))
@@ -149,7 +150,11 @@ def main_singleCategory(options,args) :
         plotfunc.AddRatioManual(cans[-1],curve,pull,drawopt1='l',drawopt2='p')
 
 
+        #
+        # Fitting data sidebands - first function
+        #
         print 'Fitting data sidebands (other function)'
+        print f.ftest_function.PrintParameters()        
         ChiSquareTools.FitForChi2_DataSidebands(f.ftest_function)
         print f.ftest_function.PrintParameters()        
         print 'Fitting data sidebands (other function) done'
@@ -157,6 +162,9 @@ def main_singleCategory(options,args) :
         chi2_2 = ChiSquareTools.GetChiSquare(f.frame,f.obsVar,f.ftest_function.function_ext,f.datasb_rebinned,ndof_bins_2)
         pvalue_chi2_2 = ROOT.TMath.Prob(chi2_2*(ndof_bins_2),ndof_bins_2)
 
+        #
+        # Plotting stuff - other function
+        #
         Tools.ClearRooPlot(f.frame)
         ChiSquareTools.NormalizeToSideband(f.ftest_function)
         f.datasb_rebinned.plotOn(f.frame)
@@ -166,7 +174,7 @@ def main_singleCategory(options,args) :
         curve.SetLineColor(ROOT.kAzure-2); curve.SetFillColor(0)
         pull = f.frame.pullHist(); pull.SetMarkerSize(0.7); pull.SetLineColor(ROOT.kAzure-2);
         pull.SetMarkerColor(ROOT.kAzure-2)
-        #plotfunc.AddRatioManual(cans[-1],curve,pull,drawopt1='l',drawopt2='p')
+        plotfunc.AddRatioManual(cans[-1],curve,pull,drawopt1='l',drawopt2='p')
 
         ftest = ChiSquareTools.GetF(chi2,chi2_2,ndof_bins,ndof_bins_2)
 
@@ -179,8 +187,10 @@ def main_singleCategory(options,args) :
         p_ftest = 1.0 - ROOT.TMath.FDistI(ftest,ndof_bins-ndof_bins_2,ndof_bins_2)
         ftest_text += 'p_ftest: %2.5f\n'%(p_ftest)
         
-
-        fisher_dist = ChiSquareTools.ToyFtest(f,f.ftest_function,ftest,options.outdir)
+        #
+        # Throw Toys
+        #
+        fisher_dist = ChiSquareTools.ToyFtest(f,f.ftest_function,ftest,options.outdir,options.ntoys)
 
         if fisher_dist.Integral(0,100000) :
             ftest_text += 'p_ftest_toys: %2.5f\n'%(fisher_dist.Integral(fisher_dist.FindBin(ftest),100000)/float(fisher_dist.Integral(0,100000)))
@@ -235,12 +245,11 @@ def main_singleCategory(options,args) :
     plotfunc.MakeLegend(cans[-1]       ,0.57,0.63,0.90,0.91,totalentries=4)
     plotfunc.SetYaxisRanges(plotfunc.GetBotPad(cans[-1]),-4,4)
     plotfunc.SetXaxisRanges(cans[-1],functions[0].lower_range,functions[0].upper_range)
-    taxisfunc.AutoFixYaxis(plotfunc.GetTopPad(cans[-1]))
+    taxisfunc.AutoFixYaxis(plotfunc.GetTopPad(cans[-1]),forcemin=0.001)
     
     print ftest_text
     a = open('%s/ftests.txt'%(options.outdir),'w')
     a.write(options.file+'\n')
-    a.write(options.signalws+'\n')
     a.write(ftest_text+'\n')
     a.close()
 
@@ -259,20 +268,18 @@ if __name__ == '__main__':
     from optparse import OptionParser
     p = OptionParser()
     p.add_option('--category','--c',type='string',default='',dest='category',help='category (0-30something)')
-    p.add_option('--family',type='string',default='',dest='family',help='families: official,selected,ExpPoly,Laurent,PolyOverX4,Bernstein,PowerSum')
+    p.add_option('--family',type='string',default='ftest',dest='family',help='families: official,selected,ExpPoly,Laurent,PolyOverX4,Bernstein,PowerSum')
     p.add_option('--functions','--f',type='string',default='',dest='functions',help='functions Exponential,ExpPoly2,blah')
     p.add_option('--batch',action='store_true',default=False,dest='batch',help='run in batch mode')
     p.add_option('--save',action='store_true',default=False,dest='save',help='save cans to pdf')
 
-    p.add_option('--signalws',type='string',default='',dest='signalws',help='e.g. res_SM_DoubleCB_workspace_me.root')
     p.add_option('--file',type='string',default='',dest='file',help='file (in which the histogram is contained)')
+    p.add_option('--ntoys',type='int',default=0,dest='ntoys',help='Number of f-test toys')
 
     options,args = p.parse_args()
 
     ROOT.gROOT.SetBatch(options.batch)
 
-    if not options.signalws :
-        print 'Error! Specify signal workspace! Exiting.'; import sys; sys.exit()
     if not options.file :
         print 'Error! Specify file with histograms. Exiting.'; import sys; sys.exit()
 

@@ -183,7 +183,7 @@ def SetBkgToConstant(function,thebool) :
 ##################################################################################
 def snapshot(function) :
     initial_state = dict()
-    pars = function.totalPdf.getParameters(ROOT.RooArgSet())
+    pars = function.getParameters(ROOT.RooArgSet())
     iter = pars.createIterator()
     var = iter.Next()
     while var :
@@ -198,7 +198,7 @@ def snapshot(function) :
 
 ##################################################################################
 def reset_to_snapshot(function,initial_state) :
-    pars = function.totalPdf.getParameters(ROOT.RooArgSet())
+    pars = function.getParameters(ROOT.RooArgSet())
     iter = pars.createIterator()
     var = iter.Next()
     while var :
@@ -212,7 +212,7 @@ def reset_to_snapshot(function,initial_state) :
     return
 
 ##################################################################################
-def printArgs(arglist,name='') :
+def printArgs(arglist,name='',doprint=True) :
     text = ''
     
     for i in range(len(arglist)) :
@@ -221,7 +221,8 @@ def printArgs(arglist,name='') :
         if arglist[i].GetName() == 'm_yy' :
             continue
         text += '%-5s: %2.8f \pm %2.8f %s '%(arglist[i].GetName(),arglist[i].getVal(),arglist[i].getError(),arglist[i].isConstant())
-    print text
+    if doprint :
+        print text
     return text
 
 ##################################################################################
@@ -455,12 +456,15 @@ class GetPackage :
         if not hasattr(self,'filename') :
             print 'ERROR: Initialize AFTER you set the filename.'; import sys; sys.exit()
         if not hasattr(self,'signalwsfilename') :
-            print 'ERROR: Initialize AFTER you set the signalws.'; import sys; sys.exit()
+            print 'Warning: Initialize AFTER you set the signalws. Proceeding without one';
 
         #
         # get the data
         #
         f = ROOT.TFile(self.filename)
+        if f.IsZombie() :
+            print 'Error! File %s does not exist. Exiting.'%(self.filename)
+            import sys; sys.exit()
         categoryname = 'c%d_%s'%(self.category+1,categories[self.category])
         histname = 'HGamEventInfoAuxDyn_m_yy_over_1000_%s_AF2'%(categoryname)
         #print 'Using HGamEventInfoAuxDyn_m_yy_over_1000_c0_Inclusive_data'
@@ -469,7 +473,11 @@ class GetPackage :
             self.datahist = f.Get(histname.replace('AF2','data')).Clone()
         except ReferenceError :
             histname = histname+'_clone'
-            self.datahist = f.Get(histname.replace('AF2','data')).Clone()
+            tmp = f.Get(histname.replace('AF2','data'))
+            if not tmp :
+                print 'Error! Hist %s does not exist. Wrong file?'%(self.histname)
+                import sys; sys.exit()
+            self.datahist = tmp.Clone()
         self.datahist.SetDirectory(0)
         self.af2hist = f.Get(histname).Clone()
         self.af2hist.SetDirectory(0)
@@ -497,8 +505,9 @@ class GetPackage :
         # signalwsfile = ROOT.TFile('res_SM_DoubleCB_workspace_marc.root','READ')
         #self.signalWS = signalwsfile.Get('signalWS')
         #self.signalpdf = self.signalWS.pdf("sigPdf_SM_m125000_c%d"%(category))
-        self.GetSignal()
-        self.MakeTotalPdf()
+        if hasattr(self,'signalwsfilename') and self.signalwsfilename :
+            self.GetSignal()
+            self.MakeTotalPdf()
         
         #print self.signalpdf
 
@@ -507,7 +516,7 @@ class GetPackage :
         #self.workspace.var("muCBNom").setVal(125)
         #self.totalPdf.fitTo(self.data,*args_mclimit)
         text += '%-10s: '%(self.name)
-        text += printArgs(self.BkgArgList)
+        text += printArgs(self.BkgArgList,doprint=False)
         return text
 
     def SetCategory(self,category) :

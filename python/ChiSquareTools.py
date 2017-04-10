@@ -39,7 +39,7 @@ def FitForChi2_DataSidebands(f,ml=True) :
 #     f.obsVar.setRange("upper",130,160) ;
 
     # initial state
-    f.BkgNormalization.setVal(f.datasb_rebinned.sumEntries())
+    f.workspace.var('nBkg_ext').setVal(f.datasb_rebinned.sumEntries())
     f.obsVar.setBins(f.datasb_rebinned.numEntries())
 
     if ml :
@@ -71,7 +71,7 @@ def NormalizeToSideband(f) :
     # print 'tmp_integral:',tmp_integral
     # print 'Normalization is',norm
 
-    f.BkgNormalization.setVal(f.BkgNormalization.getVal()*norm)
+    f.workspace.var('nBkg_ext').setVal(f.workspace.var('nBkg_ext').getVal()*norm)
 
     # tmp_data_2 = f.function_ext.generateBinned(ROOT.RooArgSet(f.obsVar),ROOT.RooFit.ExpectedData(),ROOT.RooFit.Name("tmp_ftest_tmp_%s"%(f.name)))
     # c = ROOT.TCanvas()
@@ -174,21 +174,24 @@ def ChiSquareToys_ForSpuriousSignal(f,outdir) :
     return 
 
 ##################################################################################
-def GetChiSquare(frame,obsVar,f,data,ndof) :
+def GetChiSquare(frame,obsVar,f,data,ndof_bins) :
     import ROOT
-
-    data.plotOn(frame,ROOT.RooFit.DataError(ROOT.RooAbsData.Poisson),ROOT.RooFit.Range("all"))
-    f.plotOn(frame,ROOT.RooFit.Range("lower"),ROOT.RooFit.NormRange("lower"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
+    # data.plotOn(frame,ROOT.RooFit.DataError(ROOT.RooAbsData.Poisson),ROOT.RooFit.Range("all"))
+    # f.plotOn(frame,ROOT.RooFit.Range("lower"),ROOT.RooFit.NormRange("lower"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
 
 #     chi2_lower = frame.chiSquare(1+ndof)
 #     f.plotOn(frame,ROOT.RooFit.Range("upper"),ROOT.RooFit.NormRange("upper"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
 #     chi2_upper = frame.chiSquare(1+ndof)
 #     chi2 = (chi2_lower * (15-1-ndof) + chi2_upper * (30-1-ndof)) / float(45-1-ndof)
 
-    f.plotOn(frame,ROOT.RooFit.Range("all"),ROOT.RooFit.NormRange("all"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
-    chi2 = frame.chiSquare(ndof+1)
+    # f.plotOn(frame,ROOT.RooFit.Range("all"),ROOT.RooFit.NormRange("all"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
+    # chi2 = frame.chiSquare(ndof+1)
 
-    return chi2
+    chi2_lowerSideBand = ROOT.RooChi2Var("chi2_low","chi2_low", f, data, ROOT.RooFit.DataError(ROOT.RooAbsData.Poisson), ROOT.RooFit.Range("lower"))
+    chi2_upperSideBand = ROOT.RooChi2Var("chi2_up","chi2_up", f, data, ROOT.RooFit.DataError(ROOT.RooAbsData.Poisson), ROOT.RooFit.Range("upper"))
+    chi2 = chi2_lowerSideBand.getValV() + chi2_upperSideBand.getValV()
+
+    return chi2/float(ndof_bins)
 
 ##################################################################################
 def GetF(chi2,chi2_2,ndof_bins,ndof_bins_2,prob_hist=0,prob_hist_2=0) :
@@ -226,7 +229,7 @@ def LinkFunctionsForFtest(functions) :
     return
 
 ##################################################################################
-def ToyFtest(function,function2,the_ftest,directory,ml=True) :
+def ToyFtest(function,function2,the_ftest,directory,ntoys,ml=True) :
     import ROOT
     import Tools
     import PlotFunctions as plotfunc
@@ -264,12 +267,12 @@ def ToyFtest(function,function2,the_ftest,directory,ml=True) :
 
 #     return fisher_dist
 
-    for i in range(500) :
+    for i in range(ntoys) :
         if not i%100 : print 'Ftest:',i
 
         toy_data = function.function_ext.generateBinned(ROOT.RooArgSet(function.obsVar),ROOT.RooFit.Extended(),ROOT.RooFit.Name("tmp_ftest_toy_%d_%s"%(i,function.name)))
 
-        initial_state = Tools.snapshot(function)
+        initial_state = Tools.snapshot(function.function_ext)
         if ml :
             function.function_ext.fitTo(toy_data,
                                         ROOT.RooFit.Extended(),
@@ -292,10 +295,10 @@ def ToyFtest(function,function2,the_ftest,directory,ml=True) :
         #     function.frame.Draw()
         #     raw_input('pause')
 
-        Tools.reset_to_snapshot(function,initial_state)
+        Tools.reset_to_snapshot(function.function_ext,initial_state)
 
 
-        initial_state = Tools.snapshot(function2)
+        initial_state = Tools.snapshot(function2.function_ext)
         if ml :
             function2.function_ext.fitTo(toy_data,
                                          ROOT.RooFit.Extended(),
@@ -306,7 +309,7 @@ def ToyFtest(function,function2,the_ftest,directory,ml=True) :
         else :
             ROOT.chi2FitTo_KB(function2.function_ext,toy_data)
         chi2_2 = GetChiSquare(function.frame,function2.obsVar,function2.function_ext,toy_data,ndof_bins_2)
-        Tools.reset_to_snapshot(function2,initial_state)
+        Tools.reset_to_snapshot(function2.function_ext,initial_state)
 
         ftest = GetF(chi2,chi2_2,ndof_bins,ndof_bins_2,prob_hist,prob_hist_2)
 
