@@ -249,7 +249,7 @@ def PopulateFunctionList(functions,flist) :
         functions[-1].AddBkgFunction('pow(m_yy,a1)')
 
     if 'Pow2' in flist :
-        functions.append(Tools.GetPackage('Pow2',1))
+        functions.append(Tools.GetPackage('Pow2',3))
         functions[-1].BkgArgList.add(functions[-1].workspace.factory('a1[0,-10, 0]'))
         functions[-1].BkgArgList.add(functions[-1].workspace.factory('a2[0, -2, 2]'))
         functions[-1].BkgArgList.add(functions[-1].workspace.factory('a3[0,-10,10]'))

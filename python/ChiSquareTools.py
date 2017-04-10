@@ -40,6 +40,7 @@ def FitForChi2_DataSidebands(f,ml=True) :
 
     # initial state
     f.workspace.var('nBkg_ext').setVal(f.datasb_rebinned.sumEntries())
+    f.workspace.var('nBkg_ext').setMax(f.datasb_rebinned.sumEntries()*1.5)
     f.obsVar.setBins(f.datasb_rebinned.numEntries())
 
     if ml :
@@ -50,6 +51,7 @@ def FitForChi2_DataSidebands(f,ml=True) :
                              #,ROOT.RooFit.DataError(ROOT.RooAbsData.Poisson)
                              ,ROOT.RooFit.Minimizer('Minuit2','migrad')
                              ,ROOT.RooFit.Strategy(2)
+                             ,ROOT.RooFit.NumCPU(4)
                              )
     else : # chi2
         ROOT.gROOT.LoadMacro("Extras.h+")
@@ -174,7 +176,7 @@ def ChiSquareToys_ForSpuriousSignal(f,outdir) :
     return 
 
 ##################################################################################
-def GetChiSquare(frame,obsVar,f,data,ndof_bins) :
+def GetChiSquare(frame,obsVar,f,data,ndof_bins,i=0) :
     import ROOT
     # data.plotOn(frame,ROOT.RooFit.DataError(ROOT.RooAbsData.Poisson),ROOT.RooFit.Range("all"))
     # f.plotOn(frame,ROOT.RooFit.Range("lower"),ROOT.RooFit.NormRange("lower"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
@@ -187,8 +189,8 @@ def GetChiSquare(frame,obsVar,f,data,ndof_bins) :
     # f.plotOn(frame,ROOT.RooFit.Range("all"),ROOT.RooFit.NormRange("all"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
     # chi2 = frame.chiSquare(ndof+1)
 
-    chi2_lowerSideBand = ROOT.RooChi2Var("chi2_low","chi2_low", f, data, ROOT.RooFit.DataError(ROOT.RooAbsData.Poisson), ROOT.RooFit.Range("lower"))
-    chi2_upperSideBand = ROOT.RooChi2Var("chi2_up","chi2_up", f, data, ROOT.RooFit.DataError(ROOT.RooAbsData.Poisson), ROOT.RooFit.Range("upper"))
+    chi2_lowerSideBand = ROOT.RooChi2Var("chi2_low_%s_%d"%(f.GetName(),i),"chi2_low", f, data, ROOT.RooFit.DataError(ROOT.RooAbsData.Poisson), ROOT.RooFit.Range("lower"))
+    chi2_upperSideBand = ROOT.RooChi2Var("chi2_up_%s_%d"%(f.GetName(),i),"chi2_up", f, data, ROOT.RooFit.DataError(ROOT.RooAbsData.Poisson), ROOT.RooFit.Range("upper"))
     chi2 = chi2_lowerSideBand.getValV() + chi2_upperSideBand.getValV()
 
     return chi2/float(ndof_bins)
@@ -268,7 +270,8 @@ def ToyFtest(function,function2,the_ftest,directory,ntoys,ml=True) :
 #     return fisher_dist
 
     for i in range(ntoys) :
-        if not i%100 : print 'Ftest:',i
+        if not i%100 : print 'Ftest %d toys in progress: %d'%(ntoys,i)
+        #if not i%1 : print 'Ftest %d toys in progress: %d'%(ntoys,i)
 
         toy_data = function.function_ext.generateBinned(ROOT.RooArgSet(function.obsVar),ROOT.RooFit.Extended(),ROOT.RooFit.Name("tmp_ftest_toy_%d_%s"%(i,function.name)))
 
@@ -282,7 +285,7 @@ def ToyFtest(function,function2,the_ftest,directory,ntoys,ml=True) :
                                         )
         else :
             ROOT.chi2FitTo_KB(function.function_ext,toy_data)
-        chi2 = GetChiSquare(function.frame,function.obsVar,function.function_ext,toy_data,ndof_bins)
+        chi2 = GetChiSquare(function.frame,function.obsVar,function.function_ext,toy_data,ndof_bins,i=i)
 
         # if i == 1 :
         #     ClearRooPlot(function.frame)
@@ -308,7 +311,7 @@ def ToyFtest(function,function2,the_ftest,directory,ntoys,ml=True) :
                                          )
         else :
             ROOT.chi2FitTo_KB(function2.function_ext,toy_data)
-        chi2_2 = GetChiSquare(function.frame,function2.obsVar,function2.function_ext,toy_data,ndof_bins_2)
+        chi2_2 = GetChiSquare(function.frame,function2.obsVar,function2.function_ext,toy_data,ndof_bins_2,i=i)
         Tools.reset_to_snapshot(function2.function_ext,initial_state)
 
         ftest = GetF(chi2,chi2_2,ndof_bins,ndof_bins_2,prob_hist,prob_hist_2)
