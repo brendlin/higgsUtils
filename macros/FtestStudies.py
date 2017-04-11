@@ -11,13 +11,15 @@ import ChiSquareTools
 import FunctionsModule
 import os
 
+ROOT.gROOT.LoadMacro('RooFitFunctions.h')
+
 ROOT.RooMsgService.instance().setGlobalKillBelow(ROOT.RooFit.FATAL)
 ROOT.RooMsgService.instance().setSilentMode(True)
 
 def main_singleCategory(options,args) :
 
-    if options.category in [30,31,19] :
-        print 'Error! Too few AF2 stats. Not going to do it.'
+    if options.category in [19,23] : # ggH_0J_Cen is 0
+        print 'Error! This category has been merged away.'
         return
 
     cans = []
@@ -90,6 +92,8 @@ def main_singleCategory(options,args) :
     rebin = 5
     if options.category > 16 :
         rebin = 1
+    if options.category > 23 : # ttH categories
+        rebin = 10
     functions[0].datahist.Rebin(rebin)
     for i,f in enumerate(functions) :
         if i :
@@ -127,7 +131,7 @@ def main_singleCategory(options,args) :
         print f.PrintParameters()
         print 'Fitting data sidebands done'
         ftest_text += f.PrintParameters()+'\n'
-        chi2 = ChiSquareTools.GetChiSquare(f.frame,f.obsVar,f.function_ext,f.datasb_rebinned,ndof_bins)
+        chi2 = ROOT.GetChiSquare(f.obsVar,f.function_ext,f.datasb_rebinned,ndof_bins)
         pvalue_chi2 = ROOT.TMath.Prob(chi2*(ndof_bins),ndof_bins)
 
         #
@@ -159,7 +163,7 @@ def main_singleCategory(options,args) :
         print f.ftest_function.PrintParameters()        
         print 'Fitting data sidebands (other function) done'
         ftest_text += f.ftest_function.PrintParameters()+'\n'
-        chi2_2 = ChiSquareTools.GetChiSquare(f.frame,f.obsVar,f.ftest_function.function_ext,f.datasb_rebinned,ndof_bins_2)
+        chi2_2 = ROOT.GetChiSquare(f.obsVar,f.ftest_function.function_ext,f.datasb_rebinned,ndof_bins_2)
         pvalue_chi2_2 = ROOT.TMath.Prob(chi2_2*(ndof_bins_2),ndof_bins_2)
 
         #

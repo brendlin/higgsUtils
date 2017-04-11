@@ -29,16 +29,15 @@ categories = [
     'M17_VHlep_HIGH',        # 22
     'M17_VHdilep_LOW',       # 23
     'M17_VHdilep_HIGH',      # 24
-#    'M17_ttH',               # 25
-    'M17_ttH_Had_6j2b',      # 25
-    'M17_ttH_Had_6j1b',      # 26
-    'M17_ttH_Had_5j2b',      # 27
-    'M17_ttH_Had_5j1b',      # 28
-    'M17_ttH_Had_4j2b',      # 29
-    'M17_ttH_Had_4j1b',      # 30
+    'M17_tH_Had_4j2b',       # 25
+    'M17_tH_Had_4j1b',       # 26
+    'M17_ttH_Had_BDT4',      # 27
+    'M17_ttH_Had_BDT3',      # 28
+    'M17_ttH_Had_BDT2',      # 29
+    'M17_ttH_Had_BDT1',      # 30
     'M17_ttH_Lep',           # 31
-    'M17_ttH_Lep_0fwd',      # 32
-    'M17_ttH_Lep_1fwd',      # 33
+    'M17_tH_lep_1fwd',       # 32
+    'M17_tH_lep_0fwd',       # 33
     ]
 
 CategoryNames = {
@@ -62,10 +61,20 @@ CategoryNames = {
     'M17_qqH_BSM'           :'qqH BSM',
     'M17_VHMET_LOW'         :'VH MET Low',
     'M17_VHMET_HIGH'        :'VH MET High/BSM Merged',
-    'M17_VHMET_BSM'         :'VH MET BSM',
+    'M17_VHMET_BSM'         :'VH MET BSM MERGED AWAY',
     'M17_VHlep_LOW'         :'VH Leptonic, Low-#font[12]{p}_{T}^{#font[12]{l+MET}}',
     'M17_VHlep_HIGH'        :'VH Leptonic, High-#font[12]{p}_{T}^{#font[12]{l+MET}}',
     'M17_VHdilep_LOW'       :'VH Dileptonic',
+    'M17_VHdilep_HIGH'      :'VH Dileptonic MERGED AWAY ',
+    'M17_tH_Had_4j2b'       :'ttH Hadronic 4j2b',
+    'M17_tH_Had_4j1b'       :'ttH Hadronic 4j1b',
+    'M17_ttH_Had_BDT4'      :'ttH Hadronic BDT4',
+    'M17_ttH_Had_BDT3'      :'ttH Hadronic BDT3',
+    'M17_ttH_Had_BDT2'      :'ttH Hadronic BDT2',
+    'M17_ttH_Had_BDT1'      :'ttH Hadronic BDT1',
+    'M17_ttH_Lep'           :'ttH Leptonic',
+    'M17_tH_lep_1fwd'       :'ttH Leptonic 1fwd',
+    'M17_tH_lep_0fwd'       :'ttH Leptonic 0fwd',
     }
 
 selected = {
@@ -92,6 +101,16 @@ selected = {
     'M17_VHlep_LOW'         :'Pow',
     'M17_VHlep_HIGH'        :'Exponential',
     'M17_VHdilep_LOW'       :'Pow',
+    'M17_VHdilep_HIGH'      :'None',
+    'M17_tH_Had_4j2b'       :'Pow',
+    'M17_tH_Had_4j1b'       :'Pow',
+    'M17_ttH_Had_BDT4'      :'Exponential',
+    'M17_ttH_Had_BDT3'      :'Exponential',
+    'M17_ttH_Had_BDT2'      :'Exponential',
+    'M17_ttH_Had_BDT1'      :'Exponential',
+    'M17_ttH_Lep'           :'Pow',
+    'M17_tH_lep_1fwd'       :'Pow',
+    'M17_tH_lep_0fwd'       :'Pow',
     }
                             
 

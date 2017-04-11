@@ -23,6 +23,16 @@ ftest = {
     'M17_VHlep_LOW'         :['Pow','Pow2'],
     'M17_VHlep_HIGH'        :['Exponential','ExpPoly2'],
     'M17_VHdilep_LOW'       :['Pow','Pow2'],
+    'M17_VHdilep_HIGH'      :['None'],
+    'M17_tH_Had_4j2b'       :['Pow','Pow2'],
+    'M17_tH_Had_4j1b'       :['Pow','Pow2'],
+    'M17_ttH_Had_BDT4'      :['Exponential','ExpPoly2'],
+    'M17_ttH_Had_BDT3'      :['Exponential','ExpPoly2'],
+    'M17_ttH_Had_BDT2'      :['Exponential','ExpPoly2'],
+    'M17_ttH_Had_BDT1'      :['Exponential','ExpPoly2'],
+    'M17_ttH_Lep'           :['Pow','Pow2'],
+    'M17_tH_lep_1fwd'       :['Pow','Pow2'],
+    'M17_tH_lep_0fwd'       :['Pow','Pow2'],
     }
 
 ##################################################################################
@@ -235,6 +245,7 @@ def ToyFtest(function,function2,the_ftest,directory,ntoys,ml=True) :
     import ROOT
     import Tools
     import PlotFunctions as plotfunc
+    ROOT.gROOT.LoadMacro('RooFitFunctions.h')
 
     tmp_data_2 = function.function_ext.generateBinned(ROOT.RooArgSet(function.obsVar),ROOT.RooFit.ExpectedData(),ROOT.RooFit.Name("tmp_ftest_tmp_%s"%(function.name)))
     c = ROOT.TCanvas()
@@ -247,11 +258,11 @@ def ToyFtest(function,function2,the_ftest,directory,ntoys,ml=True) :
     #
     # Throw toys
     #
-    chi2_hist = ROOT.TH1F('%s_chi2hist'%(function.name),'%s #chi^{2}'%(function.name),50,0,2)
+    chi2_hist   = ROOT.TH1F('%s_chi2hist'%(function.name),'%s #chi^{2}'%(function.name),50,0,2)
     chi2_hist_2 = ROOT.TH1F('%s_chi2hist_2'%(function2.name),'%s #chi^{2}'%(function2.name),50,0,2)
-    prob_hist = ROOT.TH1F('%s_probhist'%(function.name),'%s p(#chi^{2})'%(function.name),50,0,2)
+    prob_hist   = ROOT.TH1F('%s_probhist'%(function.name),'%s p(#chi^{2})'%(function.name),50,0,2)
     prob_hist_2 = ROOT.TH1F('%s_probhist_2'%(function2.name),'%s p(#chi^{2})'%(function2.name),50,0,2)
-    ftest_hist = ROOT.TH1F('%s_ftest_prob'%(function2.name),'1 - p(F)',50,0,2)
+    ftest_hist  = ROOT.TH1F('%s_ftest_prob'%(function2.name),'1 - p(F)',50,0,2)
     fisher_dist = ROOT.TH1F('%s_fisher_dist'%(function.name),'toys',5000,0,20)
     fisher_func = ROOT.TH1F('%02d_%s_fisher_func'%(function.category,function.name),'F distribution',50000,0,20)
     #function.workspace.var('nBkg').setVal(function.workspace.var('nBkg').getVal()*100)
@@ -273,46 +284,10 @@ def ToyFtest(function,function2,the_ftest,directory,ntoys,ml=True) :
         if not i%100 : print 'Ftest %d toys in progress: %d'%(ntoys,i)
         #if not i%1 : print 'Ftest %d toys in progress: %d'%(ntoys,i)
 
-        toy_data = function.function_ext.generateBinned(ROOT.RooArgSet(function.obsVar),ROOT.RooFit.Extended(),ROOT.RooFit.Name("tmp_ftest_toy_%d_%s"%(i,function.name)))
-
-        initial_state = Tools.snapshot(function.function_ext)
-        if ml :
-            function.function_ext.fitTo(toy_data,
-                                        ROOT.RooFit.Extended(),
-                                        ROOT.RooFit.Range("lower,upper"),
-                                        ROOT.RooFit.Minimizer('Minuit2','migrad'),
-                                        ROOT.RooFit.Strategy(2)
-                                        )
-        else :
-            ROOT.chi2FitTo_KB(function.function_ext,toy_data)
-        chi2 = GetChiSquare(function.frame,function.obsVar,function.function_ext,toy_data,ndof_bins,i=i)
-
-        # if i == 1 :
-        #     ClearRooPlot(function.frame)
-        #     c_toy = ROOT.TCanvas('%s'%(i),'asdf',600,500)
-        #     function.frame = function.obsVar.frame()
-        #     toy_data.plotOn(function.frame,ROOT.RooFit.MarkerColor(ROOT.kRed),ROOT.RooFit.Range("all"))
-        #     function.datasb_rebinned.plotOn(function.frame,ROOT.RooFit.Range("all"))
-        #     function.function_ext.plotOn(function.frame,ROOT.RooFit.Range("lower,upper"),ROOT.RooFit.NormRange("lower,upper"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
-        #     function2.function_ext.plotOn(function.frame,ROOT.RooFit.Range("lower,upper"),ROOT.RooFit.NormRange("lower,upper"),ROOT.RooFit.Normalization(1.,ROOT.RooAbsReal.Relative))
-        #     function.frame.Draw()
-        #     raw_input('pause')
-
-        Tools.reset_to_snapshot(function.function_ext,initial_state)
-
-
-        initial_state = Tools.snapshot(function2.function_ext)
-        if ml :
-            function2.function_ext.fitTo(toy_data,
-                                         ROOT.RooFit.Extended(),
-                                         ROOT.RooFit.Range("lower,upper"),
-                                         ROOT.RooFit.Minimizer('Minuit2','migrad'),
-                                         ROOT.RooFit.Strategy(2)
-                                         )
-        else :
-            ROOT.chi2FitTo_KB(function2.function_ext,toy_data)
-        chi2_2 = GetChiSquare(function.frame,function2.obsVar,function2.function_ext,toy_data,ndof_bins_2,i=i)
-        Tools.reset_to_snapshot(function2.function_ext,initial_state)
+        res = list(ROOT.ExecuteToy(function.function_ext,function2.function_ext,function.obsVar,ndof_bins,ndof_bins_2))
+        #print res; import sys; sys.exit();
+        chi2 = res[0]
+        chi2_2 = res[1]
 
         ftest = GetF(chi2,chi2_2,ndof_bins,ndof_bins_2,prob_hist,prob_hist_2)
 
@@ -322,7 +297,6 @@ def ToyFtest(function,function2,the_ftest,directory,ntoys,ml=True) :
         p_ftest = 1.0 - ROOT.TMath.FDistI(ftest,ndof_bins-ndof_bins_2,ndof_bins_2)
         ftest_hist.Fill(p_ftest)
 
-        del toy_data
 
     c = ROOT.TCanvas('c%02d_ftest_toy_%s'%(function.category,function.name),"toy study results, %s"%(function.name),600,500)
     chi2_hist.DrawNormalized("E1")
@@ -340,6 +314,7 @@ def ToyFtest(function,function2,the_ftest,directory,ntoys,ml=True) :
     plotfunc.AutoFixYaxis(c,minzero=True)
 
     c.Print('%s/ChiSquares_%s.pdf'%(directory,c.GetName()))
+    c.Print('%s/ChiSquares_%s.eps'%(directory,c.GetName()))
     c.Print('%s/ChiSquares_%s.C'%(directory,c.GetName()))
 
 
@@ -380,6 +355,7 @@ def ToyFtest(function,function2,the_ftest,directory,ntoys,ml=True) :
     plotfunc.AutoFixAxes(d)
 
     d.Print('%s/FtestToys_%s.pdf'%(directory,d.GetName()))
+    d.Print('%s/FtestToys_%s.eps'%(directory,d.GetName()))
     d.Print('%s/FtestToys_%s.C'%(directory,d.GetName()))
 
     return fisher_dist
