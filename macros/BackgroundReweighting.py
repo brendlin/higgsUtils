@@ -22,6 +22,7 @@ def DoRescaleProcedure(af2,bkg,name,ci,c) :
     if integral(bkg,105,160) == 0 :
         return [],0,1,1
 
+    # Print the "before" picture
     cans.append(plotfunc.RatioCanvas('UntouchedRatio_%02d_%s_%s'%(ci,c,name),'%d_%s_%s'%(ci,c,name),600,500))
     af2_rebin = plotfunc.AddHistogram(cans[-1],af2)
     bkg_rebin = bkg.Clone()
@@ -37,7 +38,7 @@ def DoRescaleProcedure(af2,bkg,name,ci,c) :
     plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','entries')
 
 
-
+    # Fit the ratio of the CR and the AF2 with a line
     function = ROOT.TF1('%d_%s'%(ci,c),'[0]*(x-132.5)/(160-105) + [1]',105,160)
     if (integral(bkg,105,160) > 16) :
         af2_bkg_ratio.Fit('%d_%s'%(ci,c))
@@ -53,10 +54,16 @@ def DoRescaleProcedure(af2,bkg,name,ci,c) :
 
     af2_result = af2.Clone()
     af2_result.SetTitle(af2_result.GetName()+'_rescaled')
+
+    # Multiply the AF2 by the function
     function.SetRange(af2.GetBinLowEdge(1),af2.GetBinLowEdge(af2.GetNbinsX()+1))
     af2_result.Multiply(function)
     af2_result.SetTitle('AF2 reweighted')
+
+    # The multiplication above changes the integral, so you
+    # have to calculate an "integral factor" to correct for this.
     integral_factor = af2_integral / float(integral(af2_result,105,160))
+
     #Tools.RebinUntilSmallErrors(af2_result,bkg,binmin=105,binmax=160,errormax=1)
     af2_before.Rebin(10)
     af2_before.SetMarkerColor(ROOT.kGray)
@@ -68,6 +75,7 @@ def DoRescaleProcedure(af2,bkg,name,ci,c) :
         af2_before.Scale(integral(bkg,105,160)/integral(af2_before,105,160))
         af2_result.Scale(integral(bkg,105,160)/integral(af2_result,105,160))
 
+    # Print the "after" (rescaled) result
     cans.append(plotfunc.RatioCanvas('rescaled_%02d_%s_%s'%(ci,c,name),'%d_%s_%s_rescaled'%(ci,c,name),600,500))
     plotfunc.AddHistogram(cans[-1],af2_before)
     plotfunc.AddHistogram(cans[-1],bkg)
@@ -116,11 +124,13 @@ def main(options,args) :
 
         af2.Sumw2(); yj.Sumw2(); jj.Sumw2();
 
+        # Get the parameters for the reweighting procedure
         yj_newcans,yj_par0,yj_par1,yj_integral_factor = DoRescaleProcedure(af2,yj,'yj',i+offset,c)
         jj_newcans,jj_par0,jj_par1,jj_integral_factor = DoRescaleProcedure(af2,jj,'jj',i+offset,c)
         tmp += yj_newcans
         tmp += jj_newcans
 
+        # Get the fractions of yy, yj, jj
         fractions_file = open('fractions.txt','read')
         for l,line in enumerate(fractions_file) :
             if (l != i+offset) :
@@ -132,6 +142,7 @@ def main(options,args) :
         fractions_file.close()
         print yy_frac,yj_frac,jj_frac
 
+        # The full reweighting function
         #                                         yj                                        jj
         function = ROOT.TF1('%d_%s'%(i+offset,c),'([0]*(x-132.5)/(160-105) + [1])*[2]*[3] + ([4]*(x-132.5)/(160-105) + [5])*[6]*[7] + [8]',105,160)
         function.SetParameters(yj_par0,yj_par1,yj_frac,yj_integral_factor,jj_par0,jj_par1,jj_frac,jj_integral_factor,yy_frac)
@@ -186,6 +197,8 @@ def main(options,args) :
         outfile.cd()
         af2.Write()
 
+        # Print the final plots, below.
+
         #print Tools.FindRebinFactors(af2)
         af2.Rebin(rebin)
         data_blinded.Rebin(rebin)
@@ -229,7 +242,7 @@ def main(options,args) :
         cans += jj_newcans
 
 
-        if not options.batch :
+        if options.nobatch :
             raw_input('pause')
 
     return
@@ -239,17 +252,29 @@ if __name__ == '__main__':
 
     from optparse import OptionParser
     p = OptionParser()
-    p.add_option('--batch',action='store_true',default=False,dest='batch',help='run in batch mode')
+    p.add_option('--nobatch',action='store_true',default=False,dest='nobatch',help='run in batch mode')
     p.add_option('--af2',type='string',default='',dest='af2',help='af2 file')
     p.add_option('--yj',type='string',default='',dest='yj',help='yj file')
     p.add_option('--jj',type='string',default='',dest='jj',help='jj file')
+    p.add_option('--fractions',type='string',default='',dest='fractions',help='Text file containing the fractions of yy, yj, jj')
 
     options,args = p.parse_args()
 
-    if not options.af2 or not options.yj or not options.jj :
-        print 'Error - please specify --af2 --yj and --jj files.'
+    if not options.af2 or not options.yj or not options.jj or not options.fractions :
+        print 'Error - please specify --af2 --yj and --jj files, as well as a text file containing the fractions.'
+        fractions_ex = '''
+Baseline               78.7   18.7  2.6
+M17_ggH_0J_Cen         79.3   18.8  1.9
+M17_ggH_0J_Fwd         75.2   21.3  3.5
+M17_ggH_1J_LOW         79.5   18.0  2.6
+M17_ggH_1J_MED         83.3   15.5  1.1
+M17_ggH_1J_HIGH        87.4   12.2  0.4
+...
+'''
+        print 'Example fractions file:'
+        print fractions_ex
         import sys; sys.exit()
 
-    ROOT.gROOT.SetBatch(options.batch)
+    ROOT.gROOT.SetBatch(not options.nobatch)
 
     main(options,args)
