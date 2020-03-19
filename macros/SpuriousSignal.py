@@ -24,6 +24,22 @@ def main_singleCategory(options,args) :
 
     options.outdir = ''
 
+    category_name = None
+    category_title = None
+    selected = None
+
+    if options.analysis == 'couplings2017' :
+        category_name = Tools.categories_couplings2017[options.category]
+        category_title = Tools.CategoryNames_couplings2017[category_name]
+        selected = Tools.selected_couplings2017[category_name]
+    elif options.analysis == 'ysy' :
+        category_name = Tools.categories_ysy[options.category]
+        category_title = Tools.CategoryNames_ysy[category_name]
+        selected = Tools.selected_ysy[category_name]
+    else :
+        print('Error - do not understand analysis name %s'%(options.analysis))
+        import sys; sys.exit()
+
     if options.functions :
         flist = options.functions.split(',')
         options.outdir += '_'.join(flist)
@@ -34,7 +50,7 @@ def main_singleCategory(options,args) :
         options.outdir += 'official_functions'
 
     elif options.family == 'selected' :
-        flist = [Tools.selected[Tools.categories[options.category]]]
+        flist = [selected]
         options.outdir += 'selected_functions'
         print flist
 
@@ -66,7 +82,7 @@ def main_singleCategory(options,args) :
             ]
         options.outdir += '_'.join(flist)
 
-    options.outdir += '_c%02d_%s'%(options.category,Tools.categories[options.category])
+    options.outdir += '_c%02d_%s'%(options.category,category_name)
 
     functions = []
     FunctionsModule.PopulateFunctionList(functions,flist)
@@ -76,6 +92,7 @@ def main_singleCategory(options,args) :
         import sys; sys.exit()
 
     for f in functions :
+        f.SetAnalysis(options.analysis)
         f.SetCategory(options.category)
         f.SetFileName(options.file)
         f.SetSignalWS(options.signalws)
@@ -253,10 +270,16 @@ def main_singleCategory(options,args) :
     ##
     for f in functions :
         f.function.fitTo(f.data,*(Tools.args_bkgonly))
-    cans.append(plotfunc.RatioCanvas("TemplateFit_%02d_%s"%(options.category,Tools.categories[options.category]),"main plot",600,500))
+    cans.append(plotfunc.RatioCanvas("TemplateFit_%02d_%s"%(options.category,category_name),"main plot",600,500))
     functions[0].af2hist.SetMarkerSize(0)
-    #rebin = Tools.RebinUntilSmallErrors(functions[0].af2hist,0,Tools.lower_range,Tools.upper_range,errormax=0.3)
-    rebin = 10
+
+    rebin = 1
+    if options.rebin == 'dynamic' :
+        print('Dynamically rebinning')
+        rebin = Tools.RebinUntilSmallErrors(functions[0].af2hist,0,Tools.lower_range,Tools.upper_range,errormax=0.3)
+    else :
+        rebin = int(options.rebin)
+
     functions[0].af2hist.Rebin(rebin)
     binwidth = functions[0].af2hist.GetBinWidth(1)
     bins = int((functions[0].upper_range-functions[0].lower_range)/float(binwidth))
@@ -309,7 +332,7 @@ def main_singleCategory(options,args) :
     plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','entries','pull')
     the_text = [plotfunc.GetAtlasInternalText()
                 ,plotfunc.GetSqrtsText(13)+', '+plotfunc.GetLuminosityText(36.1)
-                ,Tools.CategoryNames[Tools.categories[options.category]]]
+                ,category_title]
     plotfunc.DrawText(cans[-1],the_text,0.19,0.70,0.59,0.91,totalentries=3)
     plotfunc.MakeLegend(cans[-1]       ,0.60,0.70,0.90,0.91,totalentries=3)
     #plotfunc.GetTopPad(cans[-1]).GetPrimitive('legend').AddEntry(0,'^{ }background-only fit','')
@@ -382,7 +405,7 @@ def main_singleCategory(options,args) :
     summary = '{:<15} & {:<15} & {:<15} & {:9.2f}\% & {:9.2f}\% & {:9.2f}\% & {:9.2f}\% \\\\\n'
     f = functions[0]
     if functions[0].passes_new :
-        summary = summary.format(Tools.categories[options.category].replace('_','\_'),
+        summary = summary.format(category_name.replace('_','\_'),
                                  old_function,
                                  f.name,
                                  f.max_spur_signalz*100.,
@@ -391,7 +414,7 @@ def main_singleCategory(options,args) :
                                  f.max_spur_signalmu_compatible*100.,
                                  )
     else :
-        summary = summary.format(Tools.categories[options.category].replace('_','\_'),old_function,'NONE',0,0,0,0)
+        summary = summary.format(category_name.replace('_','\_'),old_function,'NONE',0,0,0,0)
 
     a.write(result)
     a.write(result_new)
@@ -425,6 +448,10 @@ if __name__ == '__main__':
 
     p.add_option('--signalws',type='string',default='',dest='signalws',help='e.g. res_SM_DoubleCB_workspace_me.root')
     p.add_option('--file',type='string',default='',dest='file',help='file (in which the histogram is contained)')
+    p.add_option('--analysis',type='string',default='couplings2017',dest='analysis',help='Which analysis (for steering category names, etc)')
+
+    # Expert options
+    p.add_option('--rebin',type='string',default='1',dest='rebin',help='Rebinning strategy (Default: 1, ... any compatible rebin number... or "dynamic")')
 
     options,args = p.parse_args()
 
@@ -435,8 +462,15 @@ if __name__ == '__main__':
     if not options.file :
         print 'Error! Specify file with histograms. Exiting.'; import sys; sys.exit()
 
-    if options.category == 'all' :
+    if '-' in options.category :
+        cat_range = options.category.split('-')
+        for i in range(int(cat_range[0]), int(cat_range[1])+1) :
+            options.category = int(i)
+            main_singleCategory(options,args)
+
+    elif options.category == 'all' :
         for i in range(0,17) :
+#         for i in range(17,23) :
             options.category = int(i)
             main_singleCategory(options,args)
     else :

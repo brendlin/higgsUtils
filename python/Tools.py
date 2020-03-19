@@ -3,7 +3,7 @@ import ROOT
 import math
 import PlotFunctions as plotfunc
 
-categories = [
+categories_couplings2017 = [
     #None,
     'M17_ggH_0J_Cen',        # 1
     'M17_ggH_0J_Fwd',        # 2
@@ -40,7 +40,7 @@ categories = [
     'M17_tH_lep_0fwd',       # 33
     ]
 
-CategoryNames = {
+CategoryNames_couplings2017 = {
     'Inclusive'             :'Inclusive',
     'M17_ggH_0J_Cen'        :'ggH 0J Central',
     'M17_ggH_0J_Fwd'        :'ggH 0J Forward',
@@ -77,7 +77,7 @@ CategoryNames = {
     'M17_tH_lep_0fwd'       :'ttH Leptonic 0fwd',
     }
 
-selected = {
+selected_couplings2017 = {
     'M17_ggH_0J_Cen'        :'ExpPoly2',
     'M17_ggH_0J_Fwd'        :'ExpPoly2',
     'M17_ggH_1J_LOW'        :'ExpPoly2',
@@ -98,7 +98,7 @@ selected = {
     'M17_VHMET_LOW'         :'Exponential',
     'M17_VHMET_HIGH'        :'Exponential',
     'M17_VHMET_BSM'         :'Exponential',
-    'M17_VHlep_LOW'         :'Pow',
+    'M17_VHlep_LOW'         :'Exponential',
     'M17_VHlep_HIGH'        :'Exponential',
     'M17_VHdilep_LOW'       :'Pow',
     'M17_VHdilep_HIGH'      :'None',
@@ -113,6 +113,25 @@ selected = {
     'M17_tH_lep_0fwd'       :'Pow',
     }
                             
+def BkgHistName_couplings2017(category) :
+    categoryname = 'c%d_%s'%(category+1,categories_couplings2017[category])
+    histname = 'HGamEventInfoAuxDyn_m_yy_over_1000_%s_AF2'%(categoryname)
+    return histname
+
+def GetDataHist_couplings2017(category,file) :
+    histname = BkgHistName_couplings2017(category)
+    try :
+        datahist = file.Get(histname.replace('AF2','data')).Clone()
+    except ReferenceError :
+        histname = histname+'_clone'
+        tmp = file.Get(histname.replace('AF2','data'))
+        if not tmp :
+            print 'Error! Hist %s does not exist. Wrong file?'%(histname)
+            import sys; sys.exit()
+        datahist = tmp.Clone()
+
+    return datahist
+
 
 args_bkgonly = [# ROOT.RooFit.Extended()
     #,ROOT.RooFit.Save()
@@ -470,6 +489,8 @@ class GetPackage :
 
     def Initialize(self) :
         
+        if not hasattr(self,'analysis') :
+            print 'ERROR: Initialize AFTER you set the analysis.'; import sys; sys.exit()
         if not hasattr(self,'category') :
             print 'ERROR: Initialize AFTER you set the category.'; import sys; sys.exit()
         if not hasattr(self,'filename') :
@@ -484,21 +505,13 @@ class GetPackage :
         if f.IsZombie() :
             print 'Error! File %s does not exist. Exiting.'%(self.filename)
             import sys; sys.exit()
-        categoryname = 'c%d_%s'%(self.category+1,categories[self.category])
-        histname = 'HGamEventInfoAuxDyn_m_yy_over_1000_%s_AF2'%(categoryname)
-        #print 'Using HGamEventInfoAuxDyn_m_yy_over_1000_c0_Inclusive_data'
-        #self.datahist = f.Get('HGamEventInfoAuxDyn_m_yy_over_1000_c0_Inclusive_AF2').Clone()
-        try :
-            self.datahist = f.Get(histname.replace('AF2','data')).Clone()
-        except ReferenceError :
-            histname = histname+'_clone'
-            tmp = f.Get(histname.replace('AF2','data'))
-            if not tmp :
-                print 'Error! Hist %s does not exist. Wrong file?'%(self.histname)
-                import sys; sys.exit()
-            self.datahist = tmp.Clone()
+
+        # Get the data hist
+        if self.analysis == 'couplings2017' :
+            self.datahist = GetDataHist_couplings2017(self.category,f)
+            self.af2hist = f.Get(BkgHistName_couplings2017(self.category)).Clone()
+
         self.datahist.SetDirectory(0)
-        self.af2hist = f.Get(histname).Clone()
         self.af2hist.SetDirectory(0)
         self.af2hist_not_rebinned = self.af2hist.Clone()
         self.af2hist_not_rebinned.SetName(self.af2hist_not_rebinned.GetName()+'_not_rebinned')
@@ -537,6 +550,9 @@ class GetPackage :
         text += '%-10s: '%(self.name)
         text += printArgs(self.BkgArgList,doprint=False)
         return text
+
+    def SetAnalysis(self,analysis) :
+        self.analysis = analysis
 
     def SetCategory(self,category) :
         self.category = int(category)
