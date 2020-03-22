@@ -3,6 +3,34 @@ import ROOT
 import math
 import PlotFunctions as plotfunc
 
+categories_ysy = [
+    #None,
+    'GGF_DIMUON',              # 1
+    'GGF_RESOLVED_DIELECTRON', # 2
+    'GGF_MERGED_DIELECTRON',   # 3
+    'VBF_DIMUON',              # 4
+    'VBF_RESOLVED_DIELECTRON', # 5
+    'VBF_MERGED_DIELECTRON',   # 6
+    ]
+
+CategoryNames_ysy = {
+    'GGF_DIMUON'             :'ggF Dimuon',
+    'GGF_RESOLVED_DIELECTRON':'ggF Resolved Electron',
+    'GGF_MERGED_DIELECTRON'  :'ggF Merged Electron',
+    'VBF_DIMUON'             :'VBF Dimuon',
+    'VBF_RESOLVED_DIELECTRON':'VBF Resolved Electron',
+    'VBF_MERGED_DIELECTRON'  :'VBF Merged Electron',
+    }
+
+selected_ysy = {
+    'GGF_DIMUON'             :'Exponential',
+    'GGF_RESOLVED_DIELECTRON':'Exponential',
+    'GGF_MERGED_DIELECTRON'  :'Exponential',
+    'VBF_DIMUON'             :'Exponential',
+    'VBF_RESOLVED_DIELECTRON':'Exponential',
+    'VBF_MERGED_DIELECTRON'  :'Exponential',
+    }
+
 categories_couplings2017 = [
     #None,
     'M17_ggH_0J_Cen',        # 1
@@ -132,6 +160,13 @@ def GetDataHist_couplings2017(category,file) :
 
     return datahist
 
+def BkgHistName_ysy(category) :
+    return 'Template_c%s'%(category+1)
+
+def GetDataHist_ysy(category,file) :
+    tmp = file.Get('Template_c%d'%(category+1))
+    datahist = tmp.Clone()
+    return datahist
 
 args_bkgonly = [# ROOT.RooFit.Extended()
     #,ROOT.RooFit.Save()
@@ -446,6 +481,7 @@ class GetPackage :
         if signalwsfile.IsZombie() :
             print 'Error! File %s has a problem. Exiting.'%(self.signalwsfilename); import sys; sys.exit()
         tmpsignalWS = signalwsfile.Get('signalWS')
+        # tmpsignalWS.importClassCode()
         tmpsignalpdf = tmpsignalWS.pdf("sigPdf_SM_m125000_c%d"%(self.category)) # Me: sigPdf_SM_m125000_c Marc: sigPdf_Hyy_m125000_c28 
 
         #PrintRooThing(tmpsignalpdf)
@@ -481,6 +517,12 @@ class GetPackage :
 
         #myy = 'm_yy_m125000_c%d'%(self.category)
         self.signalpdf = self.workspace.factory("HggTwoSidedCBPdf::sigPdf(m_yy, prod::muCB(muCBNom), prod::sigmaCB(sigmaCBNom), alphaCBLo, nCBLo, alphaCBHi, nCBHi)")
+        if not self.signalpdf :
+            # Try RooTwoSidedCBShape instead of HggTwoSidedCBPdf
+            self.signalpdf = self.workspace.factory("RooTwoSidedCBShape::sigPdf(m_yy, prod::muCB(muCBNom), prod::sigmaCB(sigmaCBNom), alphaCBLo, nCBLo, alphaCBHi, nCBHi)")
+        if not self.signalpdf :
+            print('Error - signal pdf workspace factory call failed')
+            import sys; sys.exit()
 
         self.smsignalyield = tmpsignalWS.var("sigYield_SM_m125000_c%d"%(self.category))
         #print 'setting signal yield to',self.smsignalyield.getVal()
@@ -510,6 +552,14 @@ class GetPackage :
         if self.analysis == 'couplings2017' :
             self.datahist = GetDataHist_couplings2017(self.category,f)
             self.af2hist = f.Get(BkgHistName_couplings2017(self.category)).Clone()
+
+        elif self.analysis == 'ysy' :
+            self.datahist = GetDataHist_ysy(self.category,f)
+            self.af2hist = f.Get(BkgHistName_ysy(self.category)).Clone()
+
+        else :
+            print('Error - unrecognized analysis %s'%(self.analysis))
+            import sys; sys.exit()
 
         self.datahist.SetDirectory(0)
         self.af2hist.SetDirectory(0)

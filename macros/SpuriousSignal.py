@@ -11,6 +11,13 @@ import FunctionsModule
 import ChiSquareTools
 import os
 
+# Get base path (higgsUtils)
+the_path = ('/').join(os.path.abspath(__file__).split('/')[:-2])
+
+# Add to macro path
+ROOT.gROOT.SetMacroPath('%s:%s/share'%(ROOT.gROOT.GetMacroPath(),the_path))
+ROOT.gROOT.ProcessLine('.L RooTwoSidedCBShape.cxx+')
+
 ROOT.RooMsgService.instance().setGlobalKillBelow(ROOT.RooFit.FATAL)
 ROOT.RooMsgService.instance().setSilentMode(True)
 
