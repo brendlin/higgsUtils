@@ -613,10 +613,10 @@ class GetPackage :
     def SetSignalWS(self,filename) :
         self.signalwsfilename = filename
 
-    def __init__(self,name,ndof) :
+    def __init__(self,name,ndof,lower,upper) :
 
-        self.lower_range = 105
-        self.upper_range = 160
+        self.lower_range = lower
+        self.upper_range = upper
 
         self.lower_blind = 120
         self.upper_blind = 130
@@ -1039,11 +1039,11 @@ def GetSpuriousSignalMu(function,isFFT=False,index=0) :
 
     function.max_spur_signalmu_compatible = maxAbs_PreserveSign(spur_signalmu_comp)
     function.max_spur_signalmu = maxAbs_PreserveSign(spur_signalmu)
-    return max(spur_signalmu)
+    return function.max_spur_signalmu
 
 
 ##################################################################################
-def GetSpuriousSignalZ(function,index=0) :
+def GetSpuriousSignalZ(function,index=0,lower_range=110,upper_range=160) :
     import PlotFunctions as plotfunc
     colors = plotfunc.KurtColorPalate()
     from array import array
@@ -1057,7 +1057,7 @@ def GetSpuriousSignalZ(function,index=0) :
     y_comp = []
     spur_signalz_comp = []
 
-    for i in range(110,160) :
+    for i in range(lower_range,upper_range) :
         function.workspace.var("muCBNom").setVal(i)
         function.totalPdf.fitTo(function.data,*args_datalimit)
         S_fit = function.workspace.var("nSignal").getVal()

@@ -52,8 +52,8 @@ def main_singleCategory(options,args) :
         options.outdir += '_'.join(flist)
 
     elif options.family == 'official' :
-        #flist = ['Exponential','ExpPoly2','ExpPoly3','Bern4','Bern5','Pow','Pow2','Laurent0','Laurent1','Laurent2']
-        flist = ['Exponential','ExpPoly2','Bern4','Bern5','Pow','Pow2','Laurent1','Laurent2']
+        #flist = ['Exponential','ExpPoly2','ExpPoly3','Bernstein_4','Bernstein_5','Pow','Pow2','Laurent0','Laurent1','Laurent2']
+        flist = ['Exponential','ExpPoly2','Bernstein_4','Bernstein_5','Pow','Pow2','Laurent1','Laurent2']
         options.outdir += 'official_functions'
 
     elif options.family == 'selected' :
@@ -74,7 +74,7 @@ def main_singleCategory(options,args) :
         options.outdir += 'PolyOverX4_family'
 
     elif options.family == 'Bernstein' :
-        flist = list('Bern%d'%(d) for d in range(4,6))
+        flist = list('Bernstein_%d'%(d) for d in range(4,6))
         options.outdir += 'Bern_family'
 
     elif options.family == 'PowerSum' :
@@ -92,7 +92,7 @@ def main_singleCategory(options,args) :
     options.outdir += '_c%02d_%s'%(options.category,category_name)
 
     functions = []
-    FunctionsModule.PopulateFunctionList(functions,flist)
+    FunctionsModule.PopulateFunctionList(functions,flist,options.lower,options.upper)
     ChiSquareTools.LinkFunctionsForFtest(functions)
     if len(functions) == 0 :
         print 'Error! no functions loaded!'
@@ -112,9 +112,9 @@ def main_singleCategory(options,args) :
     ##
     syst_hist = ROOT.TH1F('syst_hist','syst (0-bkg)',len(flist),0,len(flist))
     for i,f in enumerate(functions) :
-        syst_hist.SetBinContent(i+1,Tools.GetSpuriousSignalMu(f,index=i))
+        syst_hist.SetBinContent(i+1,abs(Tools.GetSpuriousSignalMu(f,index=i)))
         syst_hist.GetXaxis().SetBinLabel(i+1,f.name)
-        Tools.GetSpuriousSignalZ(f,index=i)
+        Tools.GetSpuriousSignalZ(f,index=i,lower_range=options.lower,upper_range=options.upper)
     plotfunc.AddHistogram(cans[-1],syst_hist,drawopt='hist')
 
     ## Error on the signal
@@ -176,7 +176,7 @@ def main_singleCategory(options,args) :
     plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
     plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','S_{spur}/S_{SM}')
     taxisfunc.SetYaxisRanges(cans[-1],-0.5,0.5)
-    taxisfunc.SetXaxisRanges(cans[-1],110,160)
+    taxisfunc.SetXaxisRanges(cans[-1],options.lower,options.upper)
     Tools.DrawBox(121,129,-0.1,0.1)
 
 
@@ -192,7 +192,7 @@ def main_singleCategory(options,args) :
     plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
     plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','S_{spur}/S_{SM}')
     taxisfunc.SetYaxisRanges(cans[-1],-0.5,0.5)
-    taxisfunc.SetXaxisRanges(cans[-1],110,160)
+    taxisfunc.SetXaxisRanges(cans[-1],options.lower,options.upper)
     Tools.DrawBox(121,129,-0.1,0.1)
 
 
@@ -213,7 +213,7 @@ def main_singleCategory(options,args) :
     plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','S_{spur}/#Delta S')
     plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
     taxisfunc.SetYaxisRanges(cans[-1],-1.0,1.0)
-    taxisfunc.SetXaxisRanges(cans[-1],110,160)
+    taxisfunc.SetXaxisRanges(cans[-1],options.lower,options.upper)
     Tools.DrawBox(121,129,-0.2,0.2)
 
 
@@ -229,7 +229,7 @@ def main_singleCategory(options,args) :
     plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
     plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','S_{spur}/S_{SM}')
     taxisfunc.SetYaxisRanges(cans[-1],-0.5,0.5)
-    taxisfunc.SetXaxisRanges(cans[-1],110,160)
+    taxisfunc.SetXaxisRanges(cans[-1],options.lower,options.upper)
     Tools.DrawBox(121,129,-0.2,0.2)
 
 
@@ -250,7 +250,7 @@ def main_singleCategory(options,args) :
     plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','S_{bias}/#Delta S')
     plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
     taxisfunc.SetYaxisRanges(cans[-1],-0.5,0.5)
-    taxisfunc.SetXaxisRanges(cans[-1],110,160)
+    taxisfunc.SetXaxisRanges(cans[-1],options.lower,options.upper)
     Tools.DrawBox(121,129,-0.1,0.1)
 
 
@@ -458,6 +458,8 @@ if __name__ == '__main__':
     p.add_option('--analysis',type='string',default='couplings2017',dest='analysis',help='Which analysis (for steering category names, etc)')
 
     # Expert options
+    p.add_option('--lower',type='int'   ,default=105,dest='lower',help='Lower window (defaut is 105)')
+    p.add_option('--upper',type='int'   ,default=160,dest='upper',help='Upper window (defaut is 160)')
     p.add_option('--rebin',type='string',default='1',dest='rebin',help='Rebinning strategy (Default: 1, ... any compatible rebin number... or "dynamic")')
 
     options,args = p.parse_args()
