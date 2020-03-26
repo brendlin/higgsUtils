@@ -39,10 +39,14 @@ def main_singleCategory(options,args) :
         category_name = Tools.categories_couplings2017[options.category]
         category_title = Tools.CategoryNames_couplings2017[category_name]
         selected = Tools.selected_couplings2017[category_name]
+        background_label = '#gamma#gamma'
+        lumi = 36.1
     elif options.analysis == 'ysy' :
         category_name = Tools.categories_ysy[options.category]
         category_title = Tools.CategoryNames_ysy[category_name]
         selected = Tools.selected_ysy[category_name]
+        background_label = 'll#gamma'
+        lumi = 139
     else :
         print('Error - do not understand analysis name %s'%(options.analysis))
         import sys; sys.exit()
@@ -107,9 +111,8 @@ def main_singleCategory(options,args) :
 
 
     cans.append(ROOT.TCanvas("c%02d_error_summary"%(options.category),"error_summary",600,500))
-    ##
+
     ## Spurious signal Z, Mu
-    ##
     syst_hist = ROOT.TH1F('syst_hist','syst (0-bkg)',len(flist),0,len(flist))
     for i,f in enumerate(functions) :
         syst_hist.SetBinContent(i+1,abs(Tools.GetSpuriousSignalMu(f,index=i)))
@@ -135,14 +138,16 @@ def main_singleCategory(options,args) :
     for i,f in enumerate(functions) :
         injected_hist.SetBinContent(i+1,Tools.GetSignalBiasMuScan(f,index=i))
     injected_hist.SetLineStyle(2)
-    #plotfunc.AddHistogram(cans[-1],injected_hist,drawopt='hist')
+    if False :
+        plotfunc.AddHistogram(cans[-1],injected_hist,drawopt='hist')
 
     ## Systematic with injection - 125 GeV
-#     injected_hist_125 = ROOT.TH1F('injected_hist_125','injection syst 125',len(flist),0,len(flist))
-#     for i,f in enumerate(functions) :
-#         injected_hist_125.SetBinContent(i+1,Tools.GetInjectedSignalBias(f,125))
-#     injected_hist_125.SetLineStyle(2)
-#     plotfunc.AddHistogram(cans[-1],injected_hist_125,drawopt='hist')
+    injected_hist_125 = ROOT.TH1F('injected_hist_125','injection syst 125',len(flist),0,len(flist))
+    for i,f in enumerate(functions) :
+        injected_hist_125.SetBinContent(i+1,Tools.GetInjectedSignalBias(f,125))
+    injected_hist_125.SetLineStyle(2)
+    if False :
+        plotfunc.AddHistogram(cans[-1],injected_hist_125,drawopt='hist')
 
     ## Error on the signal (in the injection case) - only 125
     error_hist_inj = ROOT.TH1F('error_hist_inj','stat (inject SM)',len(flist),0,len(flist))
@@ -150,113 +155,47 @@ def main_singleCategory(options,args) :
         error_hist_inj.SetBinContent(i+1,f.injectionerror_rel) # only 125
     cans[-1].cd()
     error_hist_inj.SetLineStyle(2)
-    #plotfunc.AddHistogram(cans[-1],error_hist_inj,drawopt='hist')
+    if False :
+        plotfunc.AddHistogram(cans[-1],error_hist_inj,drawopt='hist')
 
     plotfunc.SetColors(cans[-1])
     plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
-    #plotfunc.AutoFixAxes(cans[-1],ignorelegend=True)
     taxisfunc.AutoFixYaxis(cans[-1],ignorelegend=True,minzero=True)
 
-
-
-
-
-    ##
-    ## Spurious signal mu canvas
-    ##
-    cans.append(ROOT.TCanvas("c%02d_spurious_signal_mu"%(options.category),"spurious signal mu",600,500))
     
-    functions[0].spurioussignalmucv.Draw('al')
-    functions[0].spurioussignalmuup.Draw('l')
-    functions[0].spurioussignalmudn.Draw('l')
-    for i,f in enumerate(functions[1:]) :
-        f.spurioussignalmucv.Draw('l')
-        f.spurioussignalmuup.Draw('l')
-        f.spurioussignalmudn.Draw('l')
-    plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
-    plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','S_{spur}/S_{SM}')
-    taxisfunc.SetYaxisRanges(cans[-1],-0.5,0.5)
-    taxisfunc.SetXaxisRanges(cans[-1],options.lower,options.upper)
-    Tools.DrawBox(121,129,-0.1,0.1)
 
+    def PlotCanvas(name,title,yaxislabel,members_to_plot,yrange=0.5,boxlim=0.1) :
+        cans.append(ROOT.TCanvas(name,title,600,500))
+        for f in functions :
+            for m in members_to_plot :
+                plotfunc.AddHistogram(cans[-1],getattr(f,m),drawopt='l')
+        plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9,totalentries=4,extend=True)
+        cans[-1].GetPrimitive('legend').SetFillStyle(1001)
+        plotfunc.SetAxisLabels(cans[-1],'m_{%s} [GeV]'%(background_label),yaxislabel)
+        taxisfunc.SetYaxisRanges(cans[-1],-yrange,yrange)
+        taxisfunc.SetXaxisRanges(cans[-1],options.lower,options.upper)
+        Tools.DrawBox(121,129,-boxlim,boxlim)
 
+    ## Spurious signal mu canvas
+    PlotCanvas('c%02d_spurious_signal_mu'%(options.category),'spurious signal mu','S_{spur}/S_{SM}',
+               ['spurioussignalmucv','spurioussignalmuup','spurioussignalmudn'])
 
-
-    ##
     ## Stats-limited spurious signal mu canvas
-    ##
-    cans.append(ROOT.TCanvas("c%02d_spurious_signal_mu_statlim"%(options.category),"spurious signal mu (stat-limited)",600,500))
-    functions[0].spurioussignalmucomp.Draw('al')
-    for i,f in enumerate(functions[1:]) :
-        f.spurioussignalmucomp.Draw('l')
-    plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
-    plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','S_{spur}/S_{SM}')
-    taxisfunc.SetYaxisRanges(cans[-1],-0.5,0.5)
-    taxisfunc.SetXaxisRanges(cans[-1],options.lower,options.upper)
-    Tools.DrawBox(121,129,-0.1,0.1)
+    PlotCanvas('c%02d_spurious_signal_mu_statlim'%(options.category),'spurious signal mu (stat-limited)',
+               '(S_{spur}#pm1#sigma)/S_{SM}',['spurioussignalmucomp'])
 
-
-
-
-
-    ##
     ## Spurious signal Z canvas
-    ##
-    cans.append(ROOT.TCanvas("c%02d_spurious_signal_z"%(options.category),"spurious signal z",600,500))
-    functions[0].spurioussignalzcv.Draw('al')
-    functions[0].spurioussignalzup.Draw('l')
-    functions[0].spurioussignalzdn.Draw('l')
-    for i,f in enumerate(functions[1:]) :
-        f.spurioussignalzcv.Draw('l')
-        f.spurioussignalzup.Draw('l')
-        f.spurioussignalzdn.Draw('l')
-    plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','S_{spur}/#Delta S')
-    plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
-    taxisfunc.SetYaxisRanges(cans[-1],-1.0,1.0)
-    taxisfunc.SetXaxisRanges(cans[-1],options.lower,options.upper)
-    Tools.DrawBox(121,129,-0.2,0.2)
+    PlotCanvas('c%02d_spurious_signal_z'%(options.category),'spurious signal z','S_{spur}/#Delta^{}S',
+               ['spurioussignalzcv','spurioussignalzup','spurioussignalzdn'],1.0,0.2)
 
-
-
-
-    ##
     ## Stats-limited spurious signal z canvas
-    ##
-    cans.append(ROOT.TCanvas("c%02d_spurious_signal_z_statlim"%(options.category),"spurious signal Z (stat-limited)",600,500))
-    functions[0].spurioussignalzcomp.Draw('al')
-    for i,f in enumerate(functions[1:]) :
-        f.spurioussignalzcomp.Draw('l')
-    plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
-    plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','S_{spur}/S_{SM}')
-    taxisfunc.SetYaxisRanges(cans[-1],-0.5,0.5)
-    taxisfunc.SetXaxisRanges(cans[-1],options.lower,options.upper)
-    Tools.DrawBox(121,129,-0.2,0.2)
+    PlotCanvas('c%02d_spurious_signal_z_statlim'%(options.category),'spurious signal Z (stat-limited)',
+               '(S_{spur}#pm1#sigma)/#Delta^{}S',['spurioussignalzcomp'],1.0,0.2)
 
-
-
-
-
-    ##
     ## Injected signal bias canvas
-    ##
-    cans.append(ROOT.TCanvas("c%02d_signal_bias_mu"%(options.category),"signal bias mu",600,500))
-    functions[0].signalbiasmucv.Draw('al')
-    #functions[0].signalbiasmuup.Draw('l')
-    #functions[0].signalbiasmudn.Draw('l')
-    for i,f in enumerate(functions[1:]) :
-        f.signalbiasmucv.Draw('l')
-        #f.signalbiasmuup.Draw('l')
-        #f.signalbiasmudn.Draw('l')
-    plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','S_{bias}/#Delta S')
-    plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
-    taxisfunc.SetYaxisRanges(cans[-1],-0.5,0.5)
-    taxisfunc.SetXaxisRanges(cans[-1],options.lower,options.upper)
-    Tools.DrawBox(121,129,-0.1,0.1)
-
-
-
-
-
+    PlotCanvas('c%02d_signal_bias_mu'%(options.category),'signal bias mu','S_{bias}/#Delta^{}S',
+               #['signalbiasmucv','signalbiasmuup','signalbiasmudn'])
+               ['signalbiasmucv'])
 
     ##
     ## Toy study canvases
@@ -266,11 +205,6 @@ def main_singleCategory(options,args) :
 #         plotfunc.SetAxisLabels(cans[-1],'S/S_{ref} (signal)','n toys')
 #         cans.append(Tools.ToyInjectedSignalBias(f,functions[0].deltas_relative,inject_signal=False))
 #         plotfunc.SetAxisLabels(cans[-1],'S/S_{ref} (no signal)','n toys')
-
-
-
-
-
 
     ##
     ## Plot the data and af2 (fit bkg-only just before this.) SpuriousSignal_05_M17_ggH_1J_BSM
@@ -290,7 +224,7 @@ def main_singleCategory(options,args) :
     functions[0].af2hist.Rebin(rebin)
     binwidth = functions[0].af2hist.GetBinWidth(1)
     bins = int((functions[0].upper_range-functions[0].lower_range)/float(binwidth))
-    functions[0].af2hist.SetTitle('#gamma#gamma MC')
+    functions[0].af2hist.SetTitle('%s MC'%(background_label))
     functions[0].af2hist.SetLineWidth(2)
     if options.family == 'selected' :
         functions[0].af2hist.SetLineColor(ROOT.kGray+2)
@@ -336,16 +270,16 @@ def main_singleCategory(options,args) :
         plotfunc.SetColors(cans[-1])
     plotfunc.FormatCanvasAxes(cans[-1])
     plotfunc.SetXaxisRanges(cans[-1],functions[0].lower_range,functions[0].upper_range)
-    plotfunc.SetAxisLabels(cans[-1],'m_{#gamma#gamma} [GeV]','entries','pull')
+    plotfunc.SetAxisLabels(cans[-1],'m_{%s} [GeV]'%(background_label),'entries','pull')
     the_text = [plotfunc.GetAtlasInternalText()
-                ,plotfunc.GetSqrtsText(13)+', '+plotfunc.GetLuminosityText(36.1)
+                ,plotfunc.GetSqrtsText(13)+', '+plotfunc.GetLuminosityText(lumi)
                 ,category_title]
     plotfunc.DrawText(cans[-1],the_text,0.19,0.70,0.59,0.91,totalentries=3)
-    plotfunc.MakeLegend(cans[-1]       ,0.60,0.70,0.90,0.91,totalentries=3)
+    plotfunc.MakeLegend(cans[-1]       ,0.60,0.70,0.90,0.91,totalentries=3,extend=True)
     #plotfunc.GetTopPad(cans[-1]).GetPrimitive('legend').AddEntry(0,'^{ }background-only fit','')
     #list(plotfunc.GetTopPad(cans[-1]).GetPrimitive('legend').GetListOfPrimitives())[-1].SetLabel('^{ }background-only fit')
     plotfunc.SetYaxisRanges(plotfunc.GetBotPad(cans[-1]),-4,4)
-    taxisfunc.AutoFixYaxis(plotfunc.GetTopPad(cans[-1]),ignorelegend=False,minzero=True)
+    taxisfunc.AutoFixYaxis(plotfunc.GetTopPad(cans[-1]),ignorelegend=True,ignoretext=False,minzero=True)
 
 
 
