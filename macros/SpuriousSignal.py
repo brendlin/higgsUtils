@@ -21,6 +21,16 @@ ROOT.gROOT.ProcessLine('.L RooTwoSidedCBShape.cxx+')
 ROOT.RooMsgService.instance().setGlobalKillBelow(ROOT.RooFit.FATAL)
 ROOT.RooMsgService.instance().setSilentMode(True)
 
+fcns = {
+    'official'  :['Exponential','ExpPoly2','Bernstein_4','Bernstein_5','Pow','Pow2','Laurent1','Laurent2'],
+    'selected'  :None, # to be filled in main_singleCategory
+    'ExpPoly'   :['Exponential'] + list('ExpPoly%d'%(d) for d in range(2,4)),
+    'Laurent'   :list('Laurent%d'%(d) for d in range(0,3)),
+    'PolyOverX4':['1/x^4'] + list('poly%d/x^4'%(d) for d in range(1,6)),
+    'Bernstein' :list('Bernstein_%d'%(d) for d in range(4,6)),
+    'PowerSum'  :['Pow','Pow2'],
+    }
+
 def main_singleCategory(options,args) :
 
     if options.category in [30,31] :
@@ -38,60 +48,34 @@ def main_singleCategory(options,args) :
     if options.analysis == 'couplings2017' :
         category_name = Tools.categories_couplings2017[options.category]
         category_title = Tools.CategoryNames_couplings2017[category_name]
-        selected = Tools.selected_couplings2017[category_name]
+        fcns['selected'] = Tools.selected_couplings2017[category_name]
         background_label = '#gamma#gamma'
         lumi = 36.1
     elif options.analysis == 'ysy' :
         category_name = Tools.categories_ysy[options.category]
         category_title = Tools.CategoryNames_ysy[category_name]
-        selected = Tools.selected_ysy[category_name]
+        fcns['selected'] = Tools.selected_ysy[category_name]
         background_label = 'll#gamma'
         lumi = 139
     else :
         print('Error - do not understand analysis name %s'%(options.analysis))
         import sys; sys.exit()
 
+
+    family_name = {
+        'official':'official_functions',
+        'selected':'selected_function',
+        }.get(options.family,options.family+'_family')
+
+    # A list of options is provided
     if options.functions :
         flist = options.functions.split(',')
         options.outdir += '_'.join(flist)
 
-    elif options.family == 'official' :
-        #flist = ['Exponential','ExpPoly2','ExpPoly3','Bernstein_4','Bernstein_5','Pow','Pow2','Laurent0','Laurent1','Laurent2']
-        flist = ['Exponential','ExpPoly2','Bernstein_4','Bernstein_5','Pow','Pow2','Laurent1','Laurent2']
-        options.outdir += 'official_functions'
-
-    elif options.family == 'selected' :
-        flist = [selected]
-        options.outdir += 'selected_functions'
-        print flist
-
-    elif options.family == 'ExpPoly' :
-        flist = ['Exponential'] + list('ExpPoly%d'%(d) for d in range(2,4))
-        options.outdir += 'exppoly_family'
-
-    elif options.family == 'Laurent' :
-        flist = list('Laurent%d'%(d) for d in range(0,3))
-        options.outdir += 'Laurent_family'
-
-    elif options.family == 'PolyOverX4' :
-        flist = ['1/x^4'] + list('poly%d/x^4'%(d) for d in range(1,6))
-        options.outdir += 'PolyOverX4_family'
-
-    elif options.family == 'Bernstein' :
-        flist = list('Bernstein_%d'%(d) for d in range(4,6))
-        options.outdir += 'Bern_family'
-
-    elif options.family == 'PowerSum' :
-        flist = ['Pow','Pow2']
-        options.outdir += 'PowerSum_family'
-
+    # Otherwise a family must be provided:
     else :
-        flist = [
-            'Exponential', # bad
-            'ExpPoly2',
-            'ExpPoly3',
-            ]
-        options.outdir += '_'.join(flist)
+        flist = fcns.get(options.family)
+        options.outdir += family_name
 
     options.outdir += '_c%02d_%s'%(options.category,category_name)
 
@@ -282,18 +266,6 @@ def main_singleCategory(options,args) :
     taxisfunc.AutoFixYaxis(plotfunc.GetTopPad(cans[-1]),ignorelegend=True,ignoretext=False,minzero=True)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     ##
     ## Print out the nominal parameters
     ##
@@ -382,8 +354,8 @@ if __name__ == '__main__':
     from optparse import OptionParser
     p = OptionParser()
     p.add_option('--category','--c',type='string',default='',dest='category',help='category (0-30something)')
-    p.add_option('--family',type='string',default='',dest='family',help='families: official,selected,ExpPoly,Laurent,PolyOverX4,Bernstein,PowerSum')
-    p.add_option('--functions','--f',type='string',default='',dest='functions',help='functions Exponential,ExpPoly2,blah')
+    p.add_option('--family',type='string',default='',dest='family',help='families: %s'%(', '.join(fcns.keys())))
+    p.add_option('--functions','--f',type='string',default='',dest='functions',help='functions Exponential,ExpPoly2, etc.')
     p.add_option('--batch',action='store_true',default=False,dest='batch',help='run in batch mode')
     p.add_option('--save',action='store_true',default=False,dest='save',help='save cans to pdf')
 
