@@ -193,7 +193,7 @@ def PopulateFunctionList(functions,flist,lower,upper) :
 
     if 'Bernstein_3' in flist :
     #     # My Bernstein 3
-        functions.append(Tools.GetPackage('Bernstein_3',3,lower,upper))
+        functions.append(Tools.GetPackage('Bernstein 3',3,lower,upper))
         for i in range(3) :
             functions[-1].BkgArgList.add(functions[-1].workspace.factory('a%d[0,-10,10]'%(i+1)))
             #functions[-1].AddBkgFunction(ROOT.RooGenericPdf(name,name,'(1-%s)**3 + a1*%s*(1-%s)**2 + a2*3*(%s**2)*(1-%s) + a3*%s**3'%(x,x,x,x,x,x),functions[-1].BkgArgList))
@@ -207,7 +207,7 @@ def PopulateFunctionList(functions,flist,lower,upper) :
 
 #     if 'Bernstein_4' in flist :
 #     #     # My Bernstein 4
-#         functions.append(Tools.GetPackage('Bernstein_4',4))
+#         functions.append(Tools.GetPackage('Bernstein 4',4))
 #         functions[-1].BkgArgList.add(functions[-1].workspace.factory('a1[0,-.9,.9]'))
 #         functions[-1].BkgArgList.add(functions[-1].workspace.factory('a2[0,-.9,.9]'))
 #         functions[-1].BkgArgList.add(functions[-1].workspace.factory('a3[0,-.9,.9]'))
@@ -226,7 +226,7 @@ def PopulateFunctionList(functions,flist,lower,upper) :
 
     if 'Bernstein_5' in flist :
         # My Bernstein 5
-        functions.append(Tools.GetPackage('Bernstein_5',5,lower,upper))
+        functions.append(Tools.GetPackage('Bernstein 5',5,lower,upper))
         functions[-1].BkgArgList.add(functions[-1].workspace.factory('a1[0,-.9,.9]'))
         functions[-1].BkgArgList.add(functions[-1].workspace.factory('a2[0,-.9,.9]'))
         functions[-1].BkgArgList.add(functions[-1].workspace.factory('a3[0,-.9,.9]'))
