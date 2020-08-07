@@ -11,24 +11,33 @@ categories_ysy = [
     'VBF_DIMUON',              # 4
     'VBF_RESOLVED_DIELECTRON', # 5
     'VBF_MERGED_DIELECTRON',   # 6
+    'HIPTT_DIMUON',              # 7
+    'HIPTT_RESOLVED_DIELECTRON', # 8
+    'HIPTT_MERGED_DIELECTRON',   # 9
     ]
 
 CategoryNames_ysy = {
-    'GGF_DIMUON'             :'ggF Dimuon',
-    'GGF_RESOLVED_DIELECTRON':'ggF Resolved Electron',
-    'GGF_MERGED_DIELECTRON'  :'ggF Merged Electron',
+    'GGF_DIMUON'             :'Inclusive Dimuon',
+    'GGF_RESOLVED_DIELECTRON':'Inclusive Resolved Electron',
+    'GGF_MERGED_DIELECTRON'  :'Inclusive Merged Electron',
     'VBF_DIMUON'             :'VBF Dimuon',
     'VBF_RESOLVED_DIELECTRON':'VBF Resolved Electron',
     'VBF_MERGED_DIELECTRON'  :'VBF Merged Electron',
+    'HIPTT_DIMUON'             :'High-p_{TThrust} Dimuon',
+    'HIPTT_RESOLVED_DIELECTRON':'High-p_{TThrust} Resolved Electron',
+    'HIPTT_MERGED_DIELECTRON'  :'High-p_{TThrust} Merged Electron',
     }
 
 selected_ysy = {
-    'GGF_DIMUON'             :'Exponential',
-    'GGF_RESOLVED_DIELECTRON':'Exponential',
-    'GGF_MERGED_DIELECTRON'  :'Exponential',
-    'VBF_DIMUON'             :'Exponential',
-    'VBF_RESOLVED_DIELECTRON':'Exponential',
-    'VBF_MERGED_DIELECTRON'  :'Exponential',
+    'GGF_DIMUON'               :'Exponential',
+    'GGF_RESOLVED_DIELECTRON'  :'Exponential',
+    'GGF_MERGED_DIELECTRON'    :'Exponential',
+    'VBF_DIMUON'               :'Exponential',
+    'VBF_RESOLVED_DIELECTRON'  :'Exponential',
+    'VBF_MERGED_DIELECTRON'    :'Exponential',
+    'HIPTT_DIMUON'             :'Exponential',
+    'HIPTT_RESOLVED_DIELECTRON':'Exponential',
+    'HIPTT_MERGED_DIELECTRON'  :'Exponential',
     }
 
 categories_couplings2017 = [
@@ -956,17 +965,16 @@ def GetSpuriousSignalMu(function,isFFT=False,index=0) :
             SetBkgToConstant(function,True)
             function.totalPdf.fitTo(function.data,*args_mclimit)
 
-#         import sys; sys.exit()
-        x.append(i)
-        xe.append(0)
-
         signal_yield = float(function.smsignalyield.getVal())
         error_data = function.workspace.var("nSignal").getError()
         spurious_yield = function.workspace.var("nSignal").getVal()
 
-#         if i == 121 :
-#             printArgs(function.BkgArgList)
-#             print error_data
+        if i < (function.lower_range + 5) or i > (function.upper_range - 5) :
+            SetBkgToConstant(function,False)
+            continue
+
+        x.append(i)
+        xe.append(0)
 
         y.append(spurious_yield/signal_yield)
         ye.append(error_data/signal_yield)
@@ -1070,6 +1078,11 @@ def GetSpuriousSignalZ(function,index=0,lower_range=110,upper_range=160) :
         function.totalPdf.fitTo(function.data,*args_mclimit)
         DS_mc = function.workspace.var("nSignal").getError()
         SetBkgToConstant(function,False)
+
+        if i < (function.lower_range + 5) or i > (function.upper_range - 5) :
+            SetBkgToConstant(function,False)
+            continue
+
         x.append(i)
         xe.append(0)
         y.append(S_fit/DS_fit)

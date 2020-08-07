@@ -5,7 +5,6 @@ import math
 import PlotFunctions as plotfunc
 import PyAnalysisPlotting as anaplot
 import TAxisFunctions as taxisfunc
-plotfunc.SetupStyle()
 import Tools
 import FunctionsModule
 import ChiSquareTools
@@ -22,7 +21,7 @@ ROOT.RooMsgService.instance().setGlobalKillBelow(ROOT.RooFit.FATAL)
 ROOT.RooMsgService.instance().setSilentMode(True)
 
 fcns = {
-    'official'  :['Exponential','ExpPoly2','Bernstein_4','Bernstein_5','Pow','Pow2','Laurent1','Laurent2'],
+    'official'  :['Exponential','ExpPoly2','ExpPoly3','Bernstein_4','Bernstein_5','Pow'],
     'selected'  :None, # to be filled in main_singleCategory
     'ExpPoly'   :['Exponential'] + list('ExpPoly%d'%(d) for d in range(2,4)),
     'Laurent'   :list('Laurent%d'%(d) for d in range(0,3)),
@@ -32,6 +31,9 @@ fcns = {
     }
 
 def main_singleCategory(options,args) :
+
+    # Seems important to keep the style class in memory for some reason
+    mystyle = plotfunc.SetupStyle()
 
     if options.category in [30,31] :
         print 'Error! Too few AF2 stats. Not going to do it.'
@@ -146,17 +148,22 @@ def main_singleCategory(options,args) :
     plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9)
     taxisfunc.AutoFixYaxis(cans[-1],ignorelegend=True,minzero=True)
 
-    
+    the_text = [plotfunc.GetAtlasInternalText()
+                ,plotfunc.GetSqrtsText(13)+', '+plotfunc.GetLuminosityText(lumi)
+                ,category_title]
 
     def PlotCanvas(name,title,yaxislabel,members_to_plot,yrange=0.5,boxlim=0.1) :
         cans.append(ROOT.TCanvas(name,title,600,500))
         for f in functions :
             for m in members_to_plot :
                 plotfunc.AddHistogram(cans[-1],getattr(f,m),drawopt='l')
-        plotfunc.MakeLegend(cans[-1],.6,.75,.9,.9,totalentries=4,extend=True)
+        plotfunc.FormatCanvasAxes(cans[-1])
+        plotfunc.MakeLegend(cans[-1],.6,.75,.9,.93,totalentries=4,extend=True)
+        plotfunc.DrawText(cans[-1],the_text,.20,.75,.59,.93,totalentries=4)
         cans[-1].GetPrimitive('legend').SetFillStyle(1001)
         plotfunc.SetAxisLabels(cans[-1],'m_{%s} [GeV]'%(background_label),yaxislabel)
-        taxisfunc.SetYaxisRanges(cans[-1],-yrange,yrange)
+        #taxisfunc.SetYaxisRanges(cans[-1],-yrange,yrange)
+        taxisfunc.AutoFixYaxis(cans[-1])
         taxisfunc.SetXaxisRanges(cans[-1],options.lower,options.upper)
         Tools.DrawBox(121,129,-boxlim,boxlim)
 
@@ -255,9 +262,6 @@ def main_singleCategory(options,args) :
     plotfunc.FormatCanvasAxes(cans[-1])
     plotfunc.SetXaxisRanges(cans[-1],functions[0].lower_range,functions[0].upper_range)
     plotfunc.SetAxisLabels(cans[-1],'m_{%s} [GeV]'%(background_label),'entries','pull')
-    the_text = [plotfunc.GetAtlasInternalText()
-                ,plotfunc.GetSqrtsText(13)+', '+plotfunc.GetLuminosityText(lumi)
-                ,category_title]
     plotfunc.DrawText(cans[-1],the_text,0.19,0.70,0.59,0.91,totalentries=3)
     plotfunc.MakeLegend(cans[-1]       ,0.60,0.70,0.90,0.91,totalentries=3,extend=True)
     #plotfunc.GetTopPad(cans[-1]).GetPrimitive('legend').AddEntry(0,'^{ }background-only fit','')
