@@ -266,9 +266,11 @@ def main_singleCategory(options,args) :
     plotfunc.SetAxisLabels(cans[-1],'m_{%s} [GeV]'%(background_label),'entries','pull')
     plotfunc.DrawText(cans[-1],the_text,0.19,0.70,0.59,0.91,totalentries=3)
     plotfunc.MakeLegend(cans[-1]       ,0.60,0.70,0.90,0.91,totalentries=3,extend=True)
-    #plotfunc.GetTopPad(cans[-1]).GetPrimitive('legend').AddEntry(0,'^{ }background-only fit','')
-    #list(plotfunc.GetTopPad(cans[-1]).GetPrimitive('legend').GetListOfPrimitives())[-1].SetLabel('^{ }background-only fit')
-    plotfunc.SetYaxisRanges(plotfunc.GetBotPad(cans[-1]),-4,4)
+
+    if options.family == 'selected' :
+        list(plotfunc.GetTopPad(cans[-1]).GetPrimitive('legend').GetListOfPrimitives())[2].SetLabel('^{ }background-only fit')
+
+    plotfunc.SetYaxisRanges(plotfunc.GetBotPad(cans[-1]),-3.99,3.99)
     taxisfunc.AutoFixYaxis(plotfunc.GetTopPad(cans[-1]),ignorelegend=True,ignoretext=False,minzero=True)
 
 
