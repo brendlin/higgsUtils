@@ -205,11 +205,13 @@ def main_singleCategory(options,args) :
     cans.append(plotfunc.RatioCanvas("TemplateFit_%02d_%s"%(options.category,category_name),"main plot",600,500))
     functions[0].af2hist.SetMarkerSize(0)
 
-    rebin = 1
+    # Rebin to get 1 bin per GeV
+    rebin = int(functions[0].af2hist.GetNbinsX() / 55)
+
     if options.rebin == 'dynamic' :
         print('Dynamically rebinning')
         rebin = Tools.RebinUntilSmallErrors(functions[0].af2hist,0,Tools.lower_range,Tools.upper_range,errormax=0.3)
-    else :
+    elif int(options.rebin) > 0 :
         rebin = int(options.rebin)
 
     functions[0].af2hist.Rebin(rebin)
@@ -370,7 +372,7 @@ if __name__ == '__main__':
     # Expert options
     p.add_option('--lower',type='int'   ,default=105,dest='lower',help='Lower window (defaut is 105)')
     p.add_option('--upper',type='int'   ,default=160,dest='upper',help='Upper window (defaut is 160)')
-    p.add_option('--rebin',type='string',default='1',dest='rebin',help='Rebinning strategy (Default: 1, ... any compatible rebin number... or "dynamic")')
+    p.add_option('--rebin',type='string',default='0',dest='rebin',help='Rebinning strategy (Default: 1 GeV/bin. Pick any compatible rebin number... or "dynamic")')
 
     options,args = p.parse_args()
 
