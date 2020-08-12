@@ -302,7 +302,7 @@ def printArgs(arglist,name='',doprint=True) :
             continue
         if arglist[i].GetName() == 'm_yy' :
             continue
-        text += '%-5s: %2.8f \pm %2.8f %s '%(arglist[i].GetName(),arglist[i].getVal(),arglist[i].getError(),arglist[i].isConstant())
+        text += '%-3s: %2.8f \pm %2.8f %s '%(arglist[i].GetName(),arglist[i].getVal(),arglist[i].getError(),arglist[i].isConstant())
     if doprint :
         print text
     return text
@@ -583,7 +583,7 @@ class GetPackage :
         binwidth = self.af2hist.GetBinWidth(1)
         self.bins = int((self.upper_range-self.lower_range)/float(binwidth))
         #print 'binwidth:',binwidth,'bins:',self.bins
-        print 'Integral:',self.integral
+        #print 'Integral:',self.integral
         self.obsVar.setBins(int(self.bins)) # was 600
         self.data = ROOT.RooDataHist('data','',ROOT.RooArgList(self.obsVar),self.af2hist,1.)
         self.data_realdata = ROOT.RooDataHist('data','',ROOT.RooArgList(self.obsVar),self.datahist,1.)
@@ -681,40 +681,98 @@ class GetPackage :
         self.total_error = math.sqrt(self.deltas_relative**2 + self.max_spur_signalmu**2)
         return self.total_error
 
-    def PrintSpuriousSignalStudy(self) :
+    def RunTests(self) :
+        self.passes_nominal   =  (math.fabs(self.max_spur_signalmu           ) < 0.1) or (math.fabs(self.max_spur_signalz           ) < 0.2)
+        self.passes_1sig_chi2 = ((math.fabs(self.max_spur_signalmu_compatible) < 0.1) or (math.fabs(self.max_spur_signalz_compatible) < 0.2)) and (self.pvalue_chi2 > 0.01)
+        return
+
+    def PrintSpuriousSignalStudy(self,
+                                 skipHeader=False,
+                                 doInjectionBias=False,
+                                 doToyBias=False,
+                                 doToyBiasNoSignal=False,
+                                 doNominalSpTest=False,
+                                 doRelaxedSpTest=True,
+                                 doCompatibilityMu=True,
+                                 doCompatibilityZ=True,
+                                 ) :
+
         if not hasattr(self,'toyBiasHist_fitResults') :
             self.toyBiasHist_fitResults = [1,0,0,0,0,0,0]
             self.ntoys_failed = -1
         if not hasattr(self,'toyBiasHist_fitResults_nosig') :
             self.toyBiasHist_fitResults_nosig = [0,0,0,0,0,0,0]
             self.ntoys_failed_nosig = -1
-        text = ''
-        self.passes = (math.fabs(self.max_spur_signalmu) < 0.1) or (math.fabs(self.max_spur_signalz) < 0.2)
-        #self.passes_new = ((math.fabs(self.max_spur_signalmu_compatible) < 0.1) or (math.fabs(self.max_spur_signalz_compatible) < 0.2)) and (self.pvalue_chi2 > 0.05)
-        self.passes_new = ((math.fabs(self.max_spur_signalmu_compatible) < 0.1) or (math.fabs(self.max_spur_signalz_compatible) < 0.2))
-        tmp = '{:<15} {:9.2f}% {:9.2f}% {:5.2f}+{:5.2f}% {:5.2f}+{:5.2f}% {:9.2f}% {:^6} {:9.2f}% {:9.2f}% {:10.5f} {:10.5f} {:10.5f} {:^6} XXX'
-        #tmp = '%<15s %10.3f %10.3f %6s %10.3f %10.5f %10.5f %10.5f %6s'
-        tmp = tmp.format(self.name
-                         ,self.max_spur_signalmu*100.
-                         ,self.max_bias_signalmu*100. # in range 121-129
-                         ,(self.toyBiasHist_fitResults[0]-1.0)*100 # toy bias
-                         ,(self.toyBiasHist_fitResults[1])*100 # toy bias error
-                         ,(self.toyBiasHist_fitResults_nosig[0])*100 # toy bias (no signal)
-                         ,(self.toyBiasHist_fitResults_nosig[1])*100 # toy bias error (no signal)
-                         ,self.max_spur_signalz*100.
-                         ,('PASS' if self.passes else 'FAIL')
-                         ,self.max_spur_signalmu_compatible*100.
-                         ,self.max_spur_signalz_compatible*100.
-                         ,self.chisquare
-                         ,self.pvalue_chi2
-                         ,self.TotalError()
-                         ,('PASS' if self.passes_new else 'FAIL')
-                         #,self.minNll
-                         )
-        text += tmp
-        print text
-        return text
 
+        # If they have not been run already,
+        # check the different spurious signal test flavors
+        self.RunTests()
+
+        header = ''
+        text = ''
+
+        header += '{:<15} '.format('Function Name')
+        text += '{:<15} '.format(self.name)
+
+        header += '{:>9} '.format('chi2')
+        text += '{:9.3g} '.format(self.chisquare)
+
+        header += '{:>10} '.format('p(chi2)')
+        text += '{:9.3g}% '.format(self.pvalue_chi2*100.)
+
+        header += '{:>9} '.format('Nspur')
+        text += '{:9.3g} '.format(self.nspur)
+
+        header += '{:>10} '.format('Sspur/DS')
+        text += '{:9.3g}% '.format(self.max_spur_signalz*100.)
+
+        header += '{:>10} '.format('Sspur/Ssmh')
+        text += '{:9.3g}% '.format(self.max_spur_signalmu*100)
+
+        if doInjectionBias :
+            header += '{:>10} '.format('inj bias')
+            text += '{:9.2f}% '.format(self.max_bias_signalmu*100.)
+
+        if doToyBias :
+            header += '{:>15} '.format('Toy bias')
+            text += '{:5.2f} '.format((self.toyBiasHist_fitResults[0]-1.0)*100)
+            text += '+/-'
+            text += '{:5.2f}% '.format((self.toyBiasHist_fitResults[1])*100)
+
+        if doToyBiasNoSignal :
+            header += '{:>15} '.format('Toy bias NoSig')
+            text += '{:5.2f} '.format((self.toyBiasHist_fitResults_nosig[0])*100)
+            text += '+/-'
+            text += '{:5.2f}% '.format((self.toyBiasHist_fitResults_nosig[1])*100)
+
+        if doNominalSpTest :
+            header += '{:>10} '.format('pass Nom')
+            text += '{:>10} '.format('PASS' if self.passes_nominal else 'FAIL')
+
+        if doRelaxedSpTest :
+            header += '{:>10} '.format('1sig,chi2')
+            text += '{:>10} '.format('PASS' if self.passes_1sig_chi2 else 'FAIL')
+
+        if doCompatibilityMu :
+            header += '{:>10} '.format('Relax spur')
+            text += '{:9.3g}% '.format(self.max_spur_signalmu_compatible*100.)
+
+        if doCompatibilityZ :
+            header += '{:>10} '.format('Relax DS')
+            text += '{:9.3g}% '.format(self.max_spur_signalz_compatible*100.)
+
+        header += '{:>10} '.format('stat err')
+        text += '{:9.3g}% '.format(self.deltas_relative*100)
+
+        header += '{:>10} '.format('tot err')
+        text += '{:9.3g}% '.format(self.TotalError()*100)
+
+        header += '\n'
+
+        if not skipHeader :
+            text = header + text
+
+        return text
 
     def PrintAdditionalStatInfo(self) :
         text = ''
@@ -948,6 +1006,8 @@ def GetSpuriousSignalMu(function,isFFT=False,index=0) :
     spur_signalmu = []
     y_comp = []
     spur_signalmu_comp = []
+    signal_yield = float(function.smsignalyield.getVal())
+
     for j in range(function.lower_range*10,(function.upper_range+1)*10,5) :
         i = j/10.
         function.workspace.var("muCBNom").setVal(i)
@@ -965,7 +1025,6 @@ def GetSpuriousSignalMu(function,isFFT=False,index=0) :
             SetBkgToConstant(function,True)
             function.totalPdf.fitTo(function.data,*args_mclimit)
 
-        signal_yield = float(function.smsignalyield.getVal())
         error_data = function.workspace.var("nSignal").getError()
         spurious_yield = function.workspace.var("nSignal").getVal()
 
@@ -1047,6 +1106,7 @@ def GetSpuriousSignalMu(function,isFFT=False,index=0) :
 
     function.max_spur_signalmu_compatible = maxAbs_PreserveSign(spur_signalmu_comp)
     function.max_spur_signalmu = maxAbs_PreserveSign(spur_signalmu)
+    function.nspur = function.max_spur_signalmu * signal_yield
     return function.max_spur_signalmu
 
 
@@ -1143,7 +1203,7 @@ def GetDeltaS_Relative(function) :
     function.workspace.var("muCBNom").setVal(125)
     function.totalPdf.fitTo(function.data,*args_datalimit)
     var = function.workspace.var("nSignal")
-    print 'INFO: Error options:',var.getError(),var.getAsymErrorLo(),var.getAsymErrorHi()
+    #print 'INFO: Error options:',var.getError(),var.getAsymErrorLo(),var.getAsymErrorHi()
     function.deltas_relative = function.workspace.var("nSignal").getError()/float(function.smsignalyield.getVal())
     return float(function.deltas_relative)
 

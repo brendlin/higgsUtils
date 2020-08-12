@@ -233,7 +233,6 @@ def main_singleCategory(options,args) :
         #f.af2_rebinned.plotOn(f.frame,ROOT.RooFit.Range("lower,upper"))
         #f.function.plotOn(f.frame,ROOT.RooFit.NormRange("lower,upper"),ROOT.RooFit.Range("all"))
         f.chisquare = ChiSquareTools.GetChiSquare_ForSpuriousSignal(f.frame,f.af2_rebinned,f.function,f.ndof)
-        print 'Original chi2:',f.chisquare
         #f.chisquare_toy = Tools.ChiSquareToys_ForSpuriousSignal(f)
         f.minNll = 0
         f.pvalue_chi2 = ROOT.TMath.Prob(f.chisquare*(f.bins-1-f.ndof),f.bins-1-f.ndof)
@@ -282,70 +281,24 @@ def main_singleCategory(options,args) :
     a = open('%s/parameters.txt'%(options.outdir),'w')
     a.write(options.file+'\n')
     a.write(options.signalws+'\n')
+
     for f in functions :
         a.write(f.PrintParameters())
         a.write('\n')
-    chi = u"\u03C7"
-    header = '{:<15} {:>10} {:>10} {:>12} {:>12} {:>10} {:>6} {:>10} {:>10} {:>10} {:>10} {:>10} {:>6}'
-    header = header.format('c%d Function'%(options.category),'Sspur/Ssmh','inj bias','Toy bias','ToyNoSig','Sspur/DS','Result','Relax spur','Relax DS','chi2','p(chi2)','tot err','Newult')
-    a.write(header+'\n')
-    print header
+
+    # Run tests, sort functions
     for f in functions :
-        a.write(f.PrintSpuriousSignalStudy()+'\n')
-    print
+        f.RunTests()
+        f.passes = f.passes_1sig_chi2
+    functions_sorted = sorted(functions,key = lambda x: (not x.passes,x.ndof))
 
-    header = '{:<15} {:>10} {:>10} {:>12} {:>10} {:>10} {:>12} {:>6} {:>6} {:>10} {:>10}'
-    header = header.format('c%d Function'%(options.category),'stat err','Toy stat0','Toy sigma0','inj stat','Toy stat','Toy sigma','nfail','nfnsig','chi2sb','p(sb)')
-    a.write(header+'\n')
-    print header
-    for f in functions :
-        a.write(f.PrintAdditionalStatInfo()+'\n')
-
-
-    #
-    # Choose the right function
-    #
-    # sorted by old criteria
-    result = ''
-    functions = sorted(functions,key = lambda x: (not x.passes,x.ndof,math.fabs(x.max_spur_signalmu)))
-    old_function = 'NONE'
-    if functions[0].passes :
-        old_function = functions[0].name
-        result += 'Old test picked %s with total uncertainty %2.2f %%\n'%(functions[0].name,functions[0].total_error*100)
-    else :
-        result += 'NO OLD FUNCTION\n'
-
-    # sorted by new criteria
-    new_function = 'NONE'
-    functions = sorted(functions,key = lambda x: (not x.passes_new,x.total_error))
-    if functions[0].passes_new :
-        result_new = 'New test picked %s with total uncertainty %2.2f %%\n'%(functions[0].name,functions[0].total_error*100)
-    else :
-        result_new = 'NO NEW FUNCTION\n'
-
-    summary = '{:<15} & {:<15} & {:<15} & {:9.2f}\% & {:9.2f}\% & {:9.2f}\% & {:9.2f}\% \\\\\n'
-    f = functions[0]
-    if functions[0].passes_new :
-        summary = summary.format(category_name.replace('_','\_'),
-                                 old_function,
-                                 f.name,
-                                 f.max_spur_signalz*100.,
-                                 f.max_spur_signalz_compatible*100,
-                                 f.max_spur_signalmu*100.,
-                                 f.max_spur_signalmu_compatible*100.,
-                                 )
-    else :
-        summary = summary.format(category_name.replace('_','\_'),old_function,'NONE',0,0,0,0)
-
-    a.write(result)
-    a.write(result_new)
-    a.write(summary)
-    print result
-    print result_new
-    print summary
+    for i,f in enumerate(functions) :
+        selected = ' selected' if ((f.name == functions_sorted[0].name) and functions_sorted[0].passes) else ''
+        row = f.PrintSpuriousSignalStudy(skipHeader=i)+selected
+        print row
+        a.write(row+'\n')
 
     a.close()
-
 
     for can in cans[:-1] :
         plotfunc.FormatCanvasAxes(can)
