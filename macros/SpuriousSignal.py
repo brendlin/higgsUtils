@@ -50,13 +50,13 @@ def main_singleCategory(options,args) :
     if options.analysis == 'couplings2017' :
         category_name = Tools.categories_couplings2017[options.category]
         category_title = Tools.CategoryNames_couplings2017[category_name]
-        fcns['selected'] = Tools.selected_couplings2017[category_name]
+        fcns['selected'] = [Tools.selected_couplings2017[category_name]]
         background_label = '#gamma#gamma'
         lumi = 36.1
     elif options.analysis == 'ysy' :
         category_name = Tools.categories_ysy[options.category]
         category_title = Tools.CategoryNames_ysy[category_name]
-        fcns['selected'] = Tools.selected_ysy[category_name]
+        fcns['selected'] = [Tools.selected_ysy[category_name]]
         background_label = 'll#gamma'
         lumi = 139
     else :
@@ -78,6 +78,10 @@ def main_singleCategory(options,args) :
     else :
         flist = fcns.get(options.family)
         options.outdir += family_name
+
+    selected_colors_dict = dict()
+    for i,f in enumerate(fcns['official']) :
+        selected_colors_dict[f] = plotfunc.KurtColorPalate()[i]
 
     options.outdir += '_c%02d_%s'%(options.category,category_name)
 
@@ -245,14 +249,9 @@ def main_singleCategory(options,args) :
 
         # for special
         if options.family == 'selected' :
-            color = {
-                'Pow'         : ROOT.kBlack+0,
-                'Exponential' : ROOT.kRed+1,
-                'ExpPoly2'    : ROOT.kBlue+1,
-                'Bern3'       : ROOT.kGreen+1,
-                'Bern4'       : ROOT.kMagenta+1,
-                'Bern5'       : ROOT.kOrange+1,
-                }.get(f.name)
+            color = selected_colors_dict.get(f.name)
+            print selected_colors_dict
+            print color
             pull.SetMarkerColor(color); pull.SetLineColor(color);
             curve.SetLineColor(color); curve.SetFillColor(0)
         
@@ -290,7 +289,9 @@ def main_singleCategory(options,args) :
     for f in functions :
         f.RunTests()
         f.passes = f.passes_1sig_chi2
-    functions_sorted = sorted(functions,key = lambda x: (not x.passes,x.ndof))
+
+    # Sort functions by passing, then ndof, then max(spurSig)
+    functions_sorted = sorted(functions,key = lambda x: (not x.passes,x.ndof,abs(x.max_spur_signalmu)))
 
     for i,f in enumerate(functions) :
         selected = ' selected' if ((f.name == functions_sorted[0].name) and functions_sorted[0].passes) else ''

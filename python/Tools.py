@@ -29,15 +29,15 @@ CategoryNames_ysy = {
     }
 
 selected_ysy = {
-    'GGF_DIMUON'               :'Exponential',
-    'GGF_RESOLVED_DIELECTRON'  :'Exponential',
-    'GGF_MERGED_DIELECTRON'    :'Exponential',
-    'VBF_DIMUON'               :'Exponential',
+    'GGF_DIMUON'               :'ExpPoly2',
+    'GGF_RESOLVED_DIELECTRON'  :'ExpPoly3',
+    'GGF_MERGED_DIELECTRON'    :'ExpPoly2',
+    'VBF_DIMUON'               :'Pow',
     'VBF_RESOLVED_DIELECTRON'  :'Exponential',
-    'VBF_MERGED_DIELECTRON'    :'Exponential',
-    'HIPTT_DIMUON'             :'Exponential',
-    'HIPTT_RESOLVED_DIELECTRON':'Exponential',
-    'HIPTT_MERGED_DIELECTRON'  :'Exponential',
+    'VBF_MERGED_DIELECTRON'    :'Pow',
+    'HIPTT_DIMUON'             :'Pow',
+    'HIPTT_RESOLVED_DIELECTRON':'Pow',
+    'HIPTT_MERGED_DIELECTRON'  :'Pow',
     }
 
 categories_couplings2017 = [
