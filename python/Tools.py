@@ -925,9 +925,8 @@ def GetInjectedSignalBias(function,mass=125) :
     return math.fabs(1.-function.workspace.var("nSignal").getVal()/float(function.smsignalyield.getVal()))
 
 ##################################################################################
-def GetSignalBiasMuScan(function,index=0) :
+def GetSignalBiasMuScan(function,color=ROOT.kBlack) :
     import PlotFunctions as plotfunc
-    colors = plotfunc.KurtColorPalate()
     from array import array
     x = []
     y = []
@@ -977,10 +976,10 @@ def GetSignalBiasMuScan(function,index=0) :
     function.signalbiasmudn.SetName('%s SigBias Mu dn'%(function.name))
     function.signalbiasmudn.SetTitle(function.name+'dn remove')
 
-    function.signalbiasmucv.SetFillColor(colors[index])
-    function.signalbiasmucv.SetLineColor(colors[index])         
-    function.signalbiasmuup.SetLineColorAlpha(colors[index],0.3)
-    function.signalbiasmudn.SetLineColorAlpha(colors[index],0.3)
+    function.signalbiasmucv.SetFillColor(color)
+    function.signalbiasmucv.SetLineColor(color)
+    function.signalbiasmuup.SetLineColorAlpha(color,0.3)
+    function.signalbiasmudn.SetLineColorAlpha(color,0.3)
 
 #     print 'signalmu',spur_signalmu
 #     print 'signalerr',spur_signalerr
@@ -993,9 +992,8 @@ def GetSignalBiasMuScan(function,index=0) :
     return maxAbs_PreserveSign(bias_signalmu)
 
 ##################################################################################
-def GetSpuriousSignalMu(function,isFFT=False,index=0) :
+def GetSpuriousSignalMu(function,isFFT=False,color=ROOT.kBlack) :
     import PlotFunctions as plotfunc
-    colors = plotfunc.KurtColorPalate()
     from array import array
     x = []
     y = []
@@ -1085,17 +1083,17 @@ def GetSpuriousSignalMu(function,isFFT=False,index=0) :
         function.spurioussignalmudn.SetName('%s SS Mu dn'%(function.name))
         function.spurioussignalmudn.SetTitle(function.name+'dn remove')
         
-        function.spurioussignalmucv.SetFillColor(colors[index])
-        function.spurioussignalmucv.SetLineColor(colors[index])
-        function.spurioussignalmuup.SetLineColorAlpha(colors[index],0.3)
-        function.spurioussignalmudn.SetLineColorAlpha(colors[index],0.3)
+        function.spurioussignalmucv.SetFillColor(color)
+        function.spurioussignalmucv.SetLineColor(color)
+        function.spurioussignalmuup.SetLineColorAlpha(color,0.3)
+        function.spurioussignalmudn.SetLineColorAlpha(color,0.3)
 
         function.spurioussignalmucomp = ROOT.TGraph(len(x),array('d',x),array('d',y_comp))
         function.spurioussignalmucomp.SetName('%s SS Mu compatibility'%(function.name))
         function.spurioussignalmucomp.SetTitle(function.name)
         function.spurioussignalmucomp.SetLineWidth(2)
-        function.spurioussignalmucomp.SetFillColor(colors[index])         
-        function.spurioussignalmucomp.SetLineColor(colors[index])         
+        function.spurioussignalmucomp.SetFillColor(color)
+        function.spurioussignalmucomp.SetLineColor(color)
 
 #     print 'signalmu',spur_signalmu
 #     print 'signalerr',spur_signalerr
@@ -1111,9 +1109,8 @@ def GetSpuriousSignalMu(function,isFFT=False,index=0) :
 
 
 ##################################################################################
-def GetSpuriousSignalZ(function,index=0,lower_range=110,upper_range=160) :
+def GetSpuriousSignalZ(function,color=ROOT.kBlack,lower_range=110,upper_range=160) :
     import PlotFunctions as plotfunc
-    colors = plotfunc.KurtColorPalate()
     from array import array
     x = []
     y = []
@@ -1182,17 +1179,17 @@ def GetSpuriousSignalZ(function,index=0,lower_range=110,upper_range=160) :
     function.spurioussignalzdn.SetName('%s SS Mu dn'%(function.name))
     function.spurioussignalzdn.SetTitle(function.name+'dn remove')
 
-    function.spurioussignalzcv.SetFillColor(colors[index])
-    function.spurioussignalzcv.SetLineColor(colors[index])
-    function.spurioussignalzup.SetLineColorAlpha(colors[index],0.3)
-    function.spurioussignalzdn.SetLineColorAlpha(colors[index],0.3)
+    function.spurioussignalzcv.SetFillColor(color)
+    function.spurioussignalzcv.SetLineColor(color)
+    function.spurioussignalzup.SetLineColorAlpha(color,0.3)
+    function.spurioussignalzdn.SetLineColorAlpha(color,0.3)
 
     function.spurioussignalzcomp = ROOT.TGraph(len(x),array('d',x),array('d',y_comp))
     function.spurioussignalzcomp.SetName('%s SS Z compatibility'%(function.name))
     function.spurioussignalzcomp.SetTitle(function.name)
     function.spurioussignalzcomp.SetLineWidth(2)
-    function.spurioussignalzcomp.SetFillColor(colors[index])
-    function.spurioussignalzcomp.SetLineColor(colors[index])
+    function.spurioussignalzcomp.SetFillColor(color)
+    function.spurioussignalzcomp.SetLineColor(color)
 
     function.max_spur_signalz = maxAbs_PreserveSign(spur_signalz)
     function.max_spur_signalz_compatible = maxAbs_PreserveSign(spur_signalz_comp)

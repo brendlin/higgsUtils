@@ -79,9 +79,23 @@ def main_singleCategory(options,args) :
         flist = fcns.get(options.family)
         options.outdir += family_name
 
+    # Sync up colors according to the function.
+    tmp_colors = plotfunc.KurtColorPalate()
+    tmp_colors[5] = ROOT.kOrange+2
     selected_colors_dict = dict()
     for i,f in enumerate(fcns['official']) :
-        selected_colors_dict[f] = plotfunc.KurtColorPalate()[i]
+        selected_colors_dict[f] = tmp_colors[i]
+
+    # The first color is for the MC histogram.
+    # The subsequent colors are associated with the functions.
+    colors = [ROOT.kGray+2]
+    for f in flist :
+        colors.append(selected_colors_dict[f])
+
+    # For non-official functions, fill in some more colors.
+    for c in tmp_colors :
+        if c not in colors :
+            colors.append(c)
 
     options.outdir += '_c%02d_%s'%(options.category,category_name)
 
@@ -105,9 +119,9 @@ def main_singleCategory(options,args) :
     ## Spurious signal Z, Mu
     syst_hist = ROOT.TH1F('syst_hist','syst (0-bkg)',len(flist),0,len(flist))
     for i,f in enumerate(functions) :
-        syst_hist.SetBinContent(i+1,abs(Tools.GetSpuriousSignalMu(f,index=i)))
+        syst_hist.SetBinContent(i+1,abs(Tools.GetSpuriousSignalMu(f,color=colors[i+1])))
         syst_hist.GetXaxis().SetBinLabel(i+1,f.name)
-        Tools.GetSpuriousSignalZ(f,index=i,lower_range=options.lower,upper_range=options.upper)
+        Tools.GetSpuriousSignalZ(f,color=colors[i+1],lower_range=options.lower,upper_range=options.upper)
     plotfunc.AddHistogram(cans[-1],syst_hist,drawopt='hist')
 
     ## Error on the signal
@@ -126,7 +140,7 @@ def main_singleCategory(options,args) :
     ## Systematic with injection
     injected_hist = ROOT.TH1F('injected_hist','syst (inject SM)',len(flist),0,len(flist))
     for i,f in enumerate(functions) :
-        injected_hist.SetBinContent(i+1,Tools.GetSignalBiasMuScan(f,index=i))
+        injected_hist.SetBinContent(i+1,Tools.GetSignalBiasMuScan(f,color=colors[i+1]))
     injected_hist.SetLineStyle(2)
     if False :
         plotfunc.AddHistogram(cans[-1],injected_hist,drawopt='hist')
@@ -223,10 +237,7 @@ def main_singleCategory(options,args) :
     bins = int((functions[0].upper_range-functions[0].lower_range)/float(binwidth))
     functions[0].af2hist.SetTitle('%s MC'%(background_label))
     functions[0].af2hist.SetLineWidth(2)
-    if options.family == 'selected' :
-        functions[0].af2hist.SetLineColor(ROOT.kGray+2)
-        functions[0].af2hist.SetFillColor(0)
-    plotfunc.AddHistogram(cans[-1],functions[0].af2hist,drawopt='')
+    plotfunc.AddHistogram(cans[-1],functions[0].af2hist,drawopt='le')
     for i,f in enumerate(functions) :
         f.obsVar.setBins(int(bins))
         f.bins = bins
@@ -250,15 +261,12 @@ def main_singleCategory(options,args) :
         # for special
         if options.family == 'selected' :
             color = selected_colors_dict.get(f.name)
-            print selected_colors_dict
-            print color
             pull.SetMarkerColor(color); pull.SetLineColor(color);
             curve.SetLineColor(color); curve.SetFillColor(0)
         
         plotfunc.AddRatioManual(cans[-1],curve,pull,drawopt1='l',drawopt2='p')
 
-    if not options.family == 'selected' :
-        plotfunc.SetColors(cans[-1])
+    plotfunc.SetColors(cans[-1],these_colors=colors)
     plotfunc.FormatCanvasAxes(cans[-1])
     plotfunc.SetXaxisRanges(cans[-1],functions[0].lower_range,functions[0].upper_range)
     plotfunc.SetAxisLabels(cans[-1],'m_{%s} [GeV]'%(background_label),'entries','pull')
