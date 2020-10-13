@@ -30,7 +30,7 @@ CategoryNames_ysy = {
 
 selected_ysy = {
     'GGF_DIMUON'               :'ExpPoly2',
-    'GGF_RESOLVED_DIELECTRON'  :'ExpPoly3',
+    'GGF_RESOLVED_DIELECTRON'  :'Pow',
     'GGF_MERGED_DIELECTRON'    :'ExpPoly2',
     'VBF_DIMUON'               :'Pow',
     'VBF_RESOLVED_DIELECTRON'  :'Exponential',
@@ -173,7 +173,7 @@ def BkgHistName_ysy(category) :
     return 'Template_c%s'%(category+1)
 
 def GetDataHist_ysy(category,file) :
-    tmp = file.Get('Template_c%d'%(category+1))
+    tmp = file.Get('Sidebands_c%d'%(category+1))
     datahist = tmp.Clone()
     return datahist
 

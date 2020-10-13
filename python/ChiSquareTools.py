@@ -33,10 +33,19 @@ ftest = {
     'M17_ttH_Lep'           :['Pow','Pow2'],
     'M17_tH_lep_1fwd'       :['Pow','Pow2'],
     'M17_tH_lep_0fwd'       :['Pow','Pow2'],
-    }
+    'GGF_DIMUON'               :['ExpPoly2','ExpPoly3'],
+    'GGF_RESOLVED_DIELECTRON'  :['Pow','Pow2'],
+    'GGF_MERGED_DIELECTRON'    :['ExpPoly2','ExpPoly3'],
+    'VBF_DIMUON'               :['Pow','Pow2'],
+    'VBF_RESOLVED_DIELECTRON'  :['Exponential','ExpPoly2'],
+    'VBF_MERGED_DIELECTRON'    :['Pow','Pow2'],
+    'HIPTT_DIMUON'             :['Pow','Pow2'],
+    'HIPTT_RESOLVED_DIELECTRON':['Pow','Pow2'],
+    'HIPTT_MERGED_DIELECTRON'  :['Pow','Pow2'],
+}
 
 ##################################################################################
-def FitForChi2_DataSidebands(f,ml=True) :
+def FitForChi2_DataSidebands(f,useMaxLikelihood=True) :
     import ROOT
 
     #ROOT.gROOT.ProcessLine('.L Extras.h')
@@ -53,7 +62,7 @@ def FitForChi2_DataSidebands(f,ml=True) :
     f.workspace.var('nBkg_ext').setMax(f.datasb_rebinned.sumEntries()*1.5)
     f.obsVar.setBins(f.datasb_rebinned.numEntries())
 
-    if ml :
+    if useMaxLikelihood :
         f.function_ext.fitTo(f.datasb_rebinned
                              ,ROOT.RooFit.Extended()
                              #,ROOT.RooFit.Warnings(False)
@@ -64,7 +73,8 @@ def FitForChi2_DataSidebands(f,ml=True) :
                              ,ROOT.RooFit.NumCPU(4)
                              )
     else : # chi2
-        ROOT.gROOT.LoadMacro("Extras.h+")
+        if not getattr(ROOT,'chi2FitTo_KB',None) :
+            ROOT.gROOT.LoadMacro("Extras.h+")
         ROOT.chi2FitTo_KB(f.function_ext,f.datasb_rebinned)
 
     return
@@ -241,11 +251,10 @@ def LinkFunctionsForFtest(functions) :
     return
 
 ##################################################################################
-def ToyFtest(function,function2,the_ftest,directory,ntoys,ml=True) :
+def ToyFtest(function,function2,the_ftest,directory,ntoys,useMaxLikelihood=True) :
     import ROOT
     import Tools
     import PlotFunctions as plotfunc
-    ROOT.gROOT.LoadMacro('RooFitFunctions.h')
 
     tmp_data_2 = function.function_ext.generateBinned(ROOT.RooArgSet(function.obsVar),ROOT.RooFit.ExpectedData(),ROOT.RooFit.Name("tmp_ftest_tmp_%s"%(function.name)))
     c = ROOT.TCanvas()
@@ -279,6 +288,9 @@ def ToyFtest(function,function2,the_ftest,directory,ntoys,ml=True) :
     # print 'ndof_bins_2',ndof_bins_2
 
 #     return fisher_dist
+
+    if not getattr(ROOT,'ExecuteToy',None) :
+        ROOT.gROOT.LoadMacro('RooFitFunctions.h')
 
     for i in range(ntoys) :
         if not i%100 : print 'Ftest %d toys in progress: %d'%(ntoys,i)
@@ -344,15 +356,17 @@ def ToyFtest(function,function2,the_ftest,directory,ntoys,ml=True) :
     from array import array
     y = array('d',[fisher_func.GetBinContent(fisher_func.GetNbinsX())/fisher_func.Integral(),
                    fisher_func.GetBinContent(fisher_func.FindBin(the_ftest))/fisher_func.Integral()])
-    a = ROOT.TGraph(2,array('d',[the_ftest,the_ftest+0.0001]),y)
+
+    a = ROOT.TGraph(2,array('d',[the_ftest,the_ftest]),y)
     a.SetName('Data sideband')
-    a.SetTitle('Data sideband')
-    a.SetLineWidth(2); a.SetLineColor(ROOT.kRed+1); a.SetFillColor(0)
-    a.Draw('l')
+    a.SetTitle('F for data SB')
+    a.SetLineWidth(2); a.SetMarkerColor(ROOT.kRed+1); a.SetLineColor(ROOT.kRed+1); a.SetFillColor(0)
+    plotfunc.AddHistogram(d,a,drawopt='l')
 
     plotfunc.SetAxisLabels(d,'F-test statistic','nToys')
-    plotfunc.MakeLegend(d,0.69,0.75,0.83,0.90)
+    plotfunc.MakeLegend(d,0.69,0.75,0.83,0.90,option=['p','l','l'])
     plotfunc.AutoFixAxes(d)
+    plotfunc.SetXaxisRanges(d,0,12)
 
     d.Print('%s/FtestToys_%s.pdf'%(directory,d.GetName()))
     d.Print('%s/FtestToys_%s.eps'%(directory,d.GetName()))
